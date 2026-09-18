@@ -309,7 +309,10 @@ top.tobin.xrecord
 - `./gradlew :app:assembleDebug` 构建通过，产出 debug APK。
 - `./gradlew :app:testDebugUnitTest` 通过，`PeriodCalculatorTest` 11 项用例全部通过，覆盖起始日为 1/5/28、平年与闰年二月、跨年与连续平移等边界。
 - Room 已生成 `XRecordDatabase_Impl`，schema 已导出至 `app/schemas/`。
+- 已在 Pixel 10 Pro Fold 模拟器（Android 17，1080x2364）上安装运行：四个一级页面均可正常切换，悬浮按钮可唤起记账面板，返回键行为正确，运行期间无崩溃日志。
 
 ### 9.5 待处理
 
-工程当前**未纳入版本控制**（目录下没有 `.git`）。本地数据库类应用一旦开始迭代，表结构变更频繁，建议尽早 `git init` 并提交基线，否则迁移脚本写错时无法回滚比对。
+- 基线已提交（commit `0ca56f6`）。后续每个阶段独立提交，表结构变更必须与迁移脚本在同一次提交内。
+- 悬浮按钮当前位于右下角（Material 3 默认位置）。若要改成底部导航中间"骑跨"的样式，需要自定义底部栏布局。
+- 主题目前是 Material 3 默认紫色 + 动态取色，尚未确定品牌配色，等主要页面成型后统一设计。
