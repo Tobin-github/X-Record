@@ -26,4 +26,8 @@ class LedgerRepository @Inject constructor(
 
     fun observeCategories(userId: Long, type: CategoryType): Flow<List<CategoryEntity>> =
         categoryDao.observeTopLevel(userId, type)
+
+    /** 全部未隐藏分类，含一级与二级，用于预算配置等需要按 id 找名字的场景。 */
+    fun observeAllCategories(userId: Long): Flow<List<CategoryEntity>> =
+        categoryDao.observeVisible(userId)
 }

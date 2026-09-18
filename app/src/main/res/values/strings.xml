@@ -77,4 +77,42 @@
     <string name="records_delete">删除</string>
     <string name="records_uncategorized">未分类</string>
     <string name="records_transfer">转账</string>
+
+    <string name="charts_range_week">周</string>
+    <string name="charts_range_month">月</string>
+    <string name="charts_range_year">年</string>
+    <string name="charts_trend_title">收支趋势</string>
+    <string name="charts_category_title">分类占比</string>
+    <string name="charts_ranking_title">分类排行</string>
+    <string name="charts_empty">这个区间还没有数据</string>
+    <string name="charts_prev_range">上一个区间</string>
+    <string name="charts_next_range">下一个区间</string>
+
+    <string name="bills_daily_average">日均支出</string>
+    <string name="bills_month_over_month">环比</string>
+    <string name="bills_books_title">账本</string>
+    <string name="bills_budget_title">预算</string>
+    <string name="bills_new_book">新建账本</string>
+    <string name="bills_rename_book">重命名</string>
+    <string name="bills_set_default">设为默认</string>
+    <string name="bills_delete_book">删除账本</string>
+    <string name="bills_default_badge">默认</string>
+    <string name="bills_book_name">账本名称</string>
+    <string name="bills_delete_book_message">将连同该账本下的 %1$d 条流水一起删除，无法恢复。</string>
+    <string name="bills_delete_book_without_transactions">该账本下暂无流水。</string>
+    <string name="bills_total_budget">总预算</string>
+    <string name="bills_set_total_budget">设置总预算</string>
+    <string name="bills_add_category_budget">添加分类预算</string>
+    <string name="bills_budget_amount">预算金额</string>
+    <string name="bills_budget_spent">已用 %1$s</string>
+    <string name="bills_budget_remaining">剩余 %1$s</string>
+    <string name="bills_budget_over">超支 %1$s</string>
+    <string name="bills_error_book_name">账本名称不能为空</string>
+    <string name="bills_error_last_book">至少要保留一本账本</string>
+    <string name="bills_choose_category">选择分类</string>
+
+    <string name="profile_period_start_day">每月起始日</string>
+    <string name="profile_period_start_day_hint">影响月度统计、图表与预算周期</string>
+    <string name="profile_period_start_day_value">每月 %1$d 日</string>
+    <string name="profile_period_start_day_range">可设置 1 至 28 日</string>
 </resources>

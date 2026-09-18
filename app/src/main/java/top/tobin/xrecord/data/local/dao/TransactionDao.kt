@@ -168,4 +168,7 @@ interface TransactionDao {
         """,
     )
     suspend fun countForAccount(accountId: Long): Int
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE bookId = :bookId")
+    suspend fun countForBook(bookId: Long): Int
 }

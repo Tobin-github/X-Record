@@ -57,25 +57,17 @@ class TransactionRepository @Inject constructor(
 
     private val zone: ZoneId get() = ZoneId.systemDefault()
 
-    /**
-     * 某个账期内的流水明细。
-     *
-     * 账本暂取用户的默认账本；账本切换在 P3 实现，届时把 bookId 变成可选项即可。
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun observeDetails(userId: Long, period: AccountingPeriod): Flow<List<TransactionDetail>> =
-        bookDao.observeDefault(userId).flatMapLatest { book ->
-            if (book == null) {
-                flowOf(emptyList())
-            } else {
-                transactionDao.observeDetailsInRange(
-                    userId = userId,
-                    bookId = book.id,
-                    startInclusive = period.startEpochMillis(zone),
-                    endExclusive = period.endExclusiveEpochMillis(zone),
-                )
-            }
-        }
+    /** 指定账本在某个日期区间内的流水明细。 */
+    fun observeDetails(
+        userId: Long,
+        bookId: Long,
+        period: AccountingPeriod,
+    ): Flow<List<TransactionDetail>> = transactionDao.observeDetailsInRange(
+        userId = userId,
+        bookId = bookId,
+        startInclusive = period.startEpochMillis(zone),
+        endExclusive = period.endExclusiveEpochMillis(zone),
+    )
 
     fun observeDetail(transactionId: Long): Flow<TransactionDetail?> =
         transactionDao.observeDetail(transactionId)

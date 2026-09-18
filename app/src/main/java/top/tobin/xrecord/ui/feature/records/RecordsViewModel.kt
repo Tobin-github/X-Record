@@ -23,6 +23,7 @@ import top.tobin.xrecord.data.local.entity.TransactionEntity
 import top.tobin.xrecord.data.local.entity.TransactionType
 import top.tobin.xrecord.data.preferences.SettingsDataSource
 import top.tobin.xrecord.data.repository.AuthRepository
+import top.tobin.xrecord.data.repository.BookRepository
 import top.tobin.xrecord.data.repository.TransactionRepository
 
 /** 同一天的流水与当日小计。 */
@@ -48,25 +49,33 @@ data class RecordsUiState(
 class RecordsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val transactionRepository: TransactionRepository,
+    private val bookRepository: BookRepository,
     settings: SettingsDataSource,
 ) : ViewModel() {
 
     private val periodOffset = MutableStateFlow(0L)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<RecordsUiState> = combine(
-        authRepository.currentUserId,
-        settings.periodStartDay,
-        periodOffset,
-    ) { userId, startDay, offset -> Triple(userId, startDay, offset) }
-        .flatMapLatest { (userId, startDay, offset) ->
+    val uiState: StateFlow<RecordsUiState> = authRepository.currentUserId
+        .flatMapLatest { userId ->
             if (userId == null) {
                 flowOf(RecordsUiState(isLoading = false))
             } else {
-                val period = currentPeriod(startDay, offset)
-                transactionRepository.observeDetails(userId, period).map { details ->
-                    buildState(period, startDay, details)
-                }
+                combine(
+                    bookRepository.observeCurrentBook(userId),
+                    settings.periodStartDay,
+                    periodOffset,
+                ) { book, startDay, offset -> Triple(book, startDay, offset) }
+                    .flatMapLatest { (book, startDay, offset) ->
+                        if (book == null) {
+                            flowOf(RecordsUiState(isLoading = false))
+                        } else {
+                            val period = currentPeriod(startDay, offset)
+                            transactionRepository
+                                .observeDetails(userId, book.id, period)
+                                .map { details -> buildState(period, startDay, details) }
+                        }
+                    }
             }
         }
         .stateIn(

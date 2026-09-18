@@ -156,7 +156,7 @@ private fun MainScaffold(onOpenTransaction: (Long) -> Unit) {
                 )
             }
             composable<ChartsRoute> { ChartsScreen() }
-            composable<BillsRoute> { BillsScreen() }
+            composable<BillsRoute> { BillsScreen(snackbarHostState = snackbarHostState) }
             composable<ProfileRoute> { ProfileScreen() }
         }
     }

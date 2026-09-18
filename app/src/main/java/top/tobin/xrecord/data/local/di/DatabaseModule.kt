@@ -11,6 +11,7 @@ import javax.inject.Singleton
 import top.tobin.xrecord.data.local.XRecordDatabase
 import top.tobin.xrecord.data.local.dao.AccountDao
 import top.tobin.xrecord.data.local.dao.BookDao
+import top.tobin.xrecord.data.local.dao.BudgetDao
 import top.tobin.xrecord.data.local.dao.CategoryDao
 import top.tobin.xrecord.data.local.dao.TransactionDao
 import top.tobin.xrecord.data.local.dao.UserDao
@@ -40,4 +41,7 @@ object DatabaseModule {
 
     @Provides
     fun provideTransactionDao(database: XRecordDatabase): TransactionDao = database.transactionDao()
+
+    @Provides
+    fun provideBudgetDao(database: XRecordDatabase): BudgetDao = database.budgetDao()
 }

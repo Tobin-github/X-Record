@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import top.tobin.xrecord.data.local.dao.AccountDao
 import top.tobin.xrecord.data.local.dao.BookDao
+import top.tobin.xrecord.data.local.dao.BudgetDao
 import top.tobin.xrecord.data.local.dao.CategoryDao
 import top.tobin.xrecord.data.local.dao.TransactionDao
 import top.tobin.xrecord.data.local.dao.UserDao
@@ -45,6 +46,8 @@ abstract class XRecordDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
 
     abstract fun transactionDao(): TransactionDao
+
+    abstract fun budgetDao(): BudgetDao
 
     companion object {
         const val NAME = "x-record.db"
