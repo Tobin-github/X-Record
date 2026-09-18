@@ -180,5 +180,4 @@
     <string name="profile_cleared">已清空流水</string>
     <string name="profile_about">关于</string>
     <string name="profile_version">版本 %1$s</string>
-    <string name="profile_coming_soon">该功能将在后续版本提供</string>
 </resources>

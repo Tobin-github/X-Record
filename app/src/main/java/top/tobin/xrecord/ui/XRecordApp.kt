@@ -33,6 +33,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import top.tobin.xrecord.R
+import top.tobin.xrecord.data.local.entity.UserEntity
 import top.tobin.xrecord.data.repository.SessionState
 import top.tobin.xrecord.ui.feature.auth.AuthNavHost
 import top.tobin.xrecord.ui.feature.auth.SessionViewModel
@@ -63,10 +64,10 @@ fun XRecordApp() {
 
     // 登录态是唯一的入口判断依据：登录成功后整个导航树被替换，
     // 未登录界面会连同它的返回栈一起销毁，不存在"按返回键退回登录页"的问题。
-    when (sessionState) {
+    when (val state = sessionState) {
         SessionState.Loading -> LoadingScreen()
         SessionState.LoggedOut -> AuthNavHost()
-        is SessionState.LoggedIn -> MainNavHost()
+        is SessionState.LoggedIn -> MainNavHost(user = state.user)
     }
 }
 
@@ -87,7 +88,7 @@ private fun LoadingScreen() {
  * 不会出现"编辑流水时底部还挂着导航栏"的别扭效果。
  */
 @Composable
-private fun MainNavHost() {
+private fun MainNavHost(user: UserEntity) {
     val navController = rememberNavController()
 
     NavHost(
@@ -97,6 +98,7 @@ private fun MainNavHost() {
     ) {
         composable<MainRoute> {
             MainScaffold(
+                user = user,
                 onOpenTransaction = { transactionId ->
                     navController.navigate(TransactionEditorRoute(transactionId))
                 },
@@ -122,6 +124,7 @@ private fun MainNavHost() {
 
 @Composable
 private fun MainScaffold(
+    user: UserEntity,
     onOpenTransaction: (Long) -> Unit,
     onOpenAccounts: () -> Unit,
     onOpenCategories: () -> Unit,
@@ -182,6 +185,7 @@ private fun MainScaffold(
             composable<BillsRoute> { BillsScreen(snackbarHostState = snackbarHostState) }
             composable<ProfileRoute> {
                 ProfileScreen(
+                    user = user,
                     snackbarHostState = snackbarHostState,
                     onOpenAccounts = onOpenAccounts,
                     onOpenCategories = onOpenCategories,

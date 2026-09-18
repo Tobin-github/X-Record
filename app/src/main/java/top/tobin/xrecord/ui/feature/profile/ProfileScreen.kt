@@ -35,11 +35,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import top.tobin.xrecord.BuildConfig
 import top.tobin.xrecord.R
-import top.tobin.xrecord.data.repository.SessionState
-import top.tobin.xrecord.ui.components.PlaceholderScreen
+import top.tobin.xrecord.data.local.entity.UserEntity
 
 @Composable
 fun ProfileScreen(
+    user: UserEntity,
     snackbarHostState: SnackbarHostState,
     onOpenAccounts: () -> Unit,
     onOpenCategories: () -> Unit,
@@ -47,10 +47,8 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
-    val sessionState by viewModel.sessionState.collectAsStateWithLifecycle()
     val periodStartDay by viewModel.periodStartDay.collectAsStateWithLifecycle()
     val cleared by viewModel.cleared.collectAsStateWithLifecycle()
-    val user = (sessionState as? SessionState.LoggedIn)?.user
 
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showPeriodStartDialog by remember { mutableStateOf(false) }
@@ -62,15 +60,6 @@ fun ProfileScreen(
             snackbarHostState.showSnackbar(clearedMessage)
             viewModel.consumeCleared()
         }
-    }
-
-    if (user == null) {
-        PlaceholderScreen(
-            title = stringResource(R.string.tab_profile),
-            description = stringResource(R.string.profile_coming_soon),
-            modifier = modifier,
-        )
-        return
     }
 
     Column(
