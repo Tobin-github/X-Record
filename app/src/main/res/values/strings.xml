@@ -115,4 +115,70 @@
     <string name="profile_period_start_day_hint">影响月度统计、图表与预算周期</string>
     <string name="profile_period_start_day_value">每月 %1$d 日</string>
     <string name="profile_period_start_day_range">可设置 1 至 28 日</string>
+
+    <string name="accounts_title">账户管理</string>
+    <string name="accounts_active">资产账户</string>
+    <string name="accounts_archived">已归档</string>
+    <string name="accounts_new">新建账户</string>
+    <string name="accounts_name">账户名称</string>
+    <string name="accounts_type">账户类型</string>
+    <string name="accounts_initial_balance">初始余额</string>
+    <string name="accounts_include_in_total">计入总资产</string>
+    <string name="accounts_archive">归档</string>
+    <string name="accounts_unarchive">恢复使用</string>
+    <string name="accounts_delete">删除账户</string>
+    <string name="accounts_delete_message">删除后无法恢复。若账户下已有流水，将不允许删除，请改为归档。</string>
+    <string name="accounts_error_name">账户名称不能为空</string>
+    <string name="accounts_error_in_use">该账户下已有流水，只能归档不能删除</string>
+    <string name="accounts_error_last">至少要保留一个可用账户</string>
+    <string name="accounts_balance">当前余额</string>
+    <string name="accounts_empty">还没有账户，先新建一个吧</string>
+
+    <string name="account_type_cash">现金</string>
+    <string name="account_type_debit">储蓄卡</string>
+    <string name="account_type_credit">信用卡</string>
+    <string name="account_type_alipay">支付宝</string>
+    <string name="account_type_wechat">微信</string>
+    <string name="account_type_investment">投资</string>
+    <string name="account_type_debt">负债</string>
+    <string name="account_type_other">其他</string>
+
+    <string name="categories_title">分类管理</string>
+    <string name="categories_new">新建分类</string>
+    <string name="categories_name">分类名称</string>
+    <string name="categories_parent">父分类</string>
+    <string name="categories_parent_none">无（一级分类）</string>
+    <string name="categories_hide">隐藏</string>
+    <string name="categories_show">显示</string>
+    <string name="categories_hidden_badge">已隐藏</string>
+    <string name="categories_preset_badge">预置</string>
+    <string name="categories_rename">重命名</string>
+    <string name="categories_delete">删除分类</string>
+    <string name="categories_delete_message">删除后该分类将从列表中移除。若已有流水或子分类引用它，将不允许删除，请改为隐藏。</string>
+    <string name="categories_error_name">分类名称不能为空</string>
+    <string name="categories_error_preset">预置分类不能删除，可以改为隐藏</string>
+    <string name="categories_error_in_use">该分类下已有流水，只能隐藏</string>
+    <string name="categories_error_has_children">该类目下还有子分类，请先处理子分类</string>
+
+    <string name="appearance_title">外观</string>
+    <string name="appearance_theme">主题</string>
+    <string name="appearance_theme_system">跟随系统</string>
+    <string name="appearance_theme_light">浅色</string>
+    <string name="appearance_theme_dark">深色</string>
+    <string name="appearance_dynamic_color">动态取色</string>
+    <string name="appearance_dynamic_color_hint">跟随壁纸生成主题色，需要 Android 12 及以上</string>
+
+    <string name="profile_section_records">记账</string>
+    <string name="profile_section_other">其他</string>
+    <string name="profile_accounts">账户管理</string>
+    <string name="profile_categories">分类管理</string>
+    <string name="profile_appearance">外观</string>
+    <string name="profile_clear_data">清空流水</string>
+    <string name="profile_clear_data_hint">保留账本、账户与分类</string>
+    <string name="profile_clear_data_title">清空全部流水</string>
+    <string name="profile_clear_data_message">将删除本账号下的全部流水记录，账本、账户与分类会保留。此操作无法撤销。</string>
+    <string name="profile_cleared">已清空流水</string>
+    <string name="profile_about">关于</string>
+    <string name="profile_version">版本 %1$s</string>
+    <string name="profile_coming_soon">该功能将在后续版本提供</string>
 </resources>

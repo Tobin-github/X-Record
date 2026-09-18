@@ -171,4 +171,11 @@ interface TransactionDao {
 
     @Query("SELECT COUNT(*) FROM transactions WHERE bookId = :bookId")
     suspend fun countForBook(bookId: Long): Int
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE categoryId = :categoryId")
+    suspend fun countForCategory(categoryId: Long): Int
+
+    /** 清空某个用户的全部流水。分类、账户、账本保留，用户的记账结构不用重建。 */
+    @Query("DELETE FROM transactions WHERE userId = :userId")
+    suspend fun deleteAllForUser(userId: Long)
 }

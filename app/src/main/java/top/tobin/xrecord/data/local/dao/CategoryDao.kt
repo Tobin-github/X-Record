@@ -23,7 +23,7 @@ interface CategoryDao {
     @Query(
         """
         SELECT * FROM categories
-        WHERE userId = :userId AND type = :type AND parentId IS NULL
+        WHERE userId = :userId AND type = :type AND parentId IS NULL AND isHidden = 0
         ORDER BY sortOrder ASC, id ASC
         """,
     )
@@ -38,11 +38,24 @@ interface CategoryDao {
     )
     suspend fun findByType(userId: Long, type: CategoryType): List<CategoryEntity>
 
+    /** 管理页需要看到被隐藏的分类，因此不过滤 isHidden。 */
+    @Query(
+        """
+        SELECT * FROM categories
+        WHERE userId = :userId AND type = :type
+        ORDER BY parentId IS NOT NULL ASC, sortOrder ASC, id ASC
+        """,
+    )
+    fun observeByType(userId: Long, type: CategoryType): Flow<List<CategoryEntity>>
+
     @Query("SELECT * FROM categories WHERE id = :categoryId LIMIT 1")
     suspend fun findById(categoryId: Long): CategoryEntity?
 
     @Query("SELECT COUNT(*) FROM categories WHERE userId = :userId")
     suspend fun countForUser(userId: Long): Int
+
+    @Query("SELECT COUNT(*) FROM categories WHERE parentId = :parentId")
+    suspend fun countChildren(parentId: Long): Int
 
     @Insert
     suspend fun insert(category: CategoryEntity): Long

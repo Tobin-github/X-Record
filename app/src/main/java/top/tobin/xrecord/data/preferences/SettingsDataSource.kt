@@ -3,9 +3,11 @@ package top.tobin.xrecord.data.preferences
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -33,6 +35,8 @@ class SettingsDataSource @Inject constructor(
         val CURRENT_USER_ID = longPreferencesKey("current_user_id")
         val CURRENT_BOOK_ID = longPreferencesKey("current_book_id")
         val PERIOD_START_DAY = intPreferencesKey("period_start_day")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+        val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
     }
 
     /** 当前登录用户 id，null 表示未登录。 */
@@ -76,4 +80,33 @@ class SettingsDataSource @Inject constructor(
             }
         }
     }
+
+    /** 主题模式：跟随系统 / 浅色 / 深色。 */
+    val themeMode: Flow<ThemeMode> = context.settingsDataStore.data
+        .map { preferences ->
+            preferences[Keys.THEME_MODE]
+                ?.let { name -> runCatching { ThemeMode.valueOf(name) }.getOrNull() }
+                ?: ThemeMode.FOLLOW_SYSTEM
+        }
+
+    val dynamicColor: Flow<Boolean> = context.settingsDataStore.data
+        .map { preferences -> preferences[Keys.DYNAMIC_COLOR] ?: true }
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[Keys.THEME_MODE] = mode.name
+        }
+    }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[Keys.DYNAMIC_COLOR] = enabled
+        }
+    }
+}
+
+enum class ThemeMode {
+    FOLLOW_SYSTEM,
+    LIGHT,
+    DARK,
 }

@@ -14,6 +14,15 @@ data object RecordsRoute
 data object MainRoute
 
 @Serializable
+data object AccountsRoute
+
+@Serializable
+data object CategoriesRoute
+
+@Serializable
+data object AppearanceRoute
+
+@Serializable
 data object ChartsRoute
 
 @Serializable

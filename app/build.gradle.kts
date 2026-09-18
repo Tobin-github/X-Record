@@ -35,6 +35,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // 关于页需要读取版本号
+        buildConfig = true
     }
 }
 

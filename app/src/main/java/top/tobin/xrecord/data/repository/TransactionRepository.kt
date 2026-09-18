@@ -133,6 +133,16 @@ class TransactionRepository @Inject constructor(
         transactionDao.insert(transaction)
     }
 
+    /**
+     * 清空该用户的全部流水，保留账本、账户与分类。
+     *
+     * 这是不可撤销的操作，调用方必须做二次确认；保留记账结构是为了让用户清空后
+     * 还能立刻继续记账，而不是面对一个空应用。
+     */
+    suspend fun clearAll(userId: Long) = withContext(ioDispatcher) {
+        transactionDao.deleteAllForUser(userId)
+    }
+
     private fun validate(draft: TransactionDraft): TransactionError? = when {
         draft.amount <= 0L -> TransactionError.AMOUNT_INVALID
         draft.accountId == null -> TransactionError.ACCOUNT_REQUIRED

@@ -37,18 +37,24 @@ import top.tobin.xrecord.data.repository.SessionState
 import top.tobin.xrecord.ui.feature.auth.AuthNavHost
 import top.tobin.xrecord.ui.feature.auth.SessionViewModel
 import top.tobin.xrecord.ui.feature.bills.BillsScreen
+import top.tobin.xrecord.ui.feature.accounts.AccountsScreen
+import top.tobin.xrecord.ui.feature.categories.CategoriesScreen
 import top.tobin.xrecord.ui.feature.charts.ChartsScreen
 import top.tobin.xrecord.ui.feature.editor.QuickEntrySheet
 import top.tobin.xrecord.ui.feature.editor.TransactionEditorScreen
 import top.tobin.xrecord.ui.feature.profile.ProfileScreen
 import top.tobin.xrecord.ui.feature.records.RecordsScreen
 import top.tobin.xrecord.ui.navigation.BillsRoute
+import top.tobin.xrecord.ui.navigation.AccountsRoute
+import top.tobin.xrecord.ui.navigation.AppearanceRoute
+import top.tobin.xrecord.ui.navigation.CategoriesRoute
 import top.tobin.xrecord.ui.navigation.ChartsRoute
 import top.tobin.xrecord.ui.navigation.MainRoute
 import top.tobin.xrecord.ui.navigation.ProfileRoute
 import top.tobin.xrecord.ui.navigation.RecordsRoute
 import top.tobin.xrecord.ui.navigation.TopLevelDestination
 import top.tobin.xrecord.ui.navigation.TransactionEditorRoute
+import top.tobin.xrecord.ui.feature.settings.AppearanceScreen
 
 @Composable
 fun XRecordApp() {
@@ -94,16 +100,33 @@ private fun MainNavHost() {
                 onOpenTransaction = { transactionId ->
                     navController.navigate(TransactionEditorRoute(transactionId))
                 },
+                onOpenAccounts = { navController.navigate(AccountsRoute) },
+                onOpenCategories = { navController.navigate(CategoriesRoute) },
+                onOpenAppearance = { navController.navigate(AppearanceRoute) },
             )
         }
         composable<TransactionEditorRoute> {
             TransactionEditorScreen(onNavigateBack = { navController.popBackStack() })
         }
+        composable<AccountsRoute> {
+            AccountsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable<CategoriesRoute> {
+            CategoriesScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable<AppearanceRoute> {
+            AppearanceScreen(onNavigateBack = { navController.popBackStack() })
+        }
     }
 }
 
 @Composable
-private fun MainScaffold(onOpenTransaction: (Long) -> Unit) {
+private fun MainScaffold(
+    onOpenTransaction: (Long) -> Unit,
+    onOpenAccounts: () -> Unit,
+    onOpenCategories: () -> Unit,
+    onOpenAppearance: () -> Unit,
+) {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry?.destination
@@ -157,7 +180,14 @@ private fun MainScaffold(onOpenTransaction: (Long) -> Unit) {
             }
             composable<ChartsRoute> { ChartsScreen() }
             composable<BillsRoute> { BillsScreen(snackbarHostState = snackbarHostState) }
-            composable<ProfileRoute> { ProfileScreen() }
+            composable<ProfileRoute> {
+                ProfileScreen(
+                    snackbarHostState = snackbarHostState,
+                    onOpenAccounts = onOpenAccounts,
+                    onOpenCategories = onOpenCategories,
+                    onOpenAppearance = onOpenAppearance,
+                )
+            }
         }
     }
 
