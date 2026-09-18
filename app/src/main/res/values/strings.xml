@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">X-Record</string>
+
+    <string name="tab_records">明细</string>
+    <string name="tab_charts">图表</string>
+    <string name="tab_bills">账单</string>
+    <string name="tab_profile">我的</string>
+
+    <string name="action_add_transaction">记一笔</string>
+    <string name="action_close">关闭</string>
+</resources>

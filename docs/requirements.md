@@ -1,0 +1,315 @@
+# X-Record 记账 App 需求规格
+
+> 状态：需求已对齐，P0 工程骨架已完成
+> 最后更新：2026-09-18
+
+## 1. 项目定位
+
+一款**纯本地**的个人记账 App。所有数据（含登录注册）保存在设备本地数据库中，不依赖服务端、不申请网络权限。设计目标是在保证数据准确性的前提下，把"记一笔"的路径压缩到最短。
+
+## 2. 已确认的技术决策
+
+| 项目 | 选型 |
+| --- | --- |
+| 语言 | Kotlin |
+| UI | Jetpack Compose + Material 3 |
+| 数据库 | Room（KSP 注解处理） |
+| 导航 | Navigation Compose（type-safe route） |
+| 依赖注入 | Hilt |
+| 偏好存储 | DataStore Preferences |
+| 图表 | Vico（原生 Compose 实现） |
+| 定时任务 | WorkManager |
+| 生物识别 | BiometricPrompt |
+| 异步 | Coroutines + Flow |
+| 构建 | AGP 9.4 / Kotlin 2.2 / compileSdk 37 / minSdk 28 |
+
+架构采用 MVVM + Repository：Room 返回 `Flow` → Repository 做聚合与领域映射 → ViewModel 用 `stateIn` 转 `StateFlow` → Compose 直接 `collectAsStateWithLifecycle`。UI 层不手写刷新逻辑，一切由数据库变更驱动。
+
+## 3. 已确认的产品决策
+
+1. **支持多账户与转账**，转账是独立的交易类型，不是特殊的支出/收入。
+2. **"账单"页 = 账本切换 + 当前账本月度汇总 + 预算进度**，三者合一。
+3. **每月起始日可配置**（默认 1 号，支持 1~28），影响所有月度统计、预算周期和图表。
+4. **不做多币种**，全局单一货币，仅货币符号可配置。
+5. **图表使用 Vico**。
+
+### 待确认的假设
+
+- 假设 A：支持同一台设备上注册多个本地账号，账号之间数据完全隔离，但不做多人共享账本、不做账号间数据合并。
+- 假设 B：应用不申请 `INTERNET` 权限，纯离线；备份与迁移通过系统文件选择器（SAF）导出导入文件完成。
+- 假设 C：金额使用 `Long` 存储"分"，展示层负责格式化为"元"。
+
+以上三条如果与预期不符，需在开工前修正。
+
+## 4. 数据模型
+
+### 4.1 实体表
+
+**users** — 本地账号
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | Long PK | 自增 |
+| username | String | 登录名，唯一索引 |
+| nickname | String | 昵称 |
+| avatarPath | String? | 头像文件路径 |
+| passwordHash | String | PBKDF2 哈希结果，禁止明文 |
+| passwordSalt | String | 每用户独立随机盐 |
+| passwordIterations | Int | 迭代次数，便于后续升级算法 |
+| createdAt / lastLoginAt | Long | 时间戳 |
+
+**books** — 账本
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | Long PK | |
+| userId | Long FK | 数据隔离键 |
+| name / icon | String | |
+| sortOrder | Int | |
+| isDefault | Boolean | 新建用户默认账本 |
+| createdAt | Long | |
+
+**accounts** — 资产账户（归属用户，跨账本共享）
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | Long PK | |
+| userId | Long FK | |
+| name / icon / color | String | |
+| type | Enum | 现金 / 储蓄卡 / 信用卡 / 支付宝 / 微信 / 投资 / 负债 / 其他 |
+| initialBalance | Long | 初始余额（分），信用卡等可为负 |
+| includeInTotal | Boolean | 是否计入总资产 |
+| cardTailNumber / remark | String? | |
+| sortOrder | Int | |
+| isArchived | Boolean | 归档而非删除，保留历史流水 |
+
+**categories** — 分类
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | Long PK | |
+| userId | Long FK | |
+| parentId | Long? | null 为一级分类，非空为二级 |
+| name / icon / color | String | |
+| type | Enum | EXPENSE / INCOME（二级继承一级方向） |
+| sortOrder | Int | 支持自定义排序 |
+| isPreset | Boolean | 系统预置只能隐藏，不能删除 |
+| isHidden | Boolean | |
+
+**transactions** — 流水（核心表）
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id | Long PK | |
+| userId / bookId | Long FK | |
+| type | Enum | EXPENSE / INCOME / TRANSFER |
+| amount | Long | 金额（分），恒为正数，方向由 type 决定 |
+| categoryId | Long? | 转账时为 null |
+| accountId | Long | 支出/收入的所属账户；转账的转出账户 |
+| toAccountId | Long? | 仅转账：转入账户 |
+| transferFee | Long? | 仅转账：手续费 |
+| occurredAt | Long | **发生时间**，统计与排序依据 |
+| createdAt / updatedAt | Long | 创建与修改时间，补记账时二者不同 |
+| remark | String? | 备注 |
+| payee | String? | 商家/交易对象 |
+| excludedFromStats | Boolean | 不计入收支统计（如待报销） |
+| recurringRuleId | Long? | 由定期账单生成时记录来源 |
+
+索引：`(userId, bookId, occurredAt DESC)`、`(categoryId)`、`(accountId)`。
+
+**tags / transaction_tags** — 标签与多对多关联
+
+**budgets** — 预算
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| id / userId | Long | |
+| bookId | Long? | null 表示全账本通用 |
+| categoryId | Long? | null 表示总预算 |
+| period | Enum | MONTH / WEEK / YEAR |
+| amount | Long | 预算额度（分） |
+| isEnabled | Boolean | |
+
+**recurring_rules** — 定期账单（房租、订阅、工资）
+
+字段含：名称、类型、金额、分类、账户、周期（日/周/月/年）、间隔、触发日、`nextTriggerAt`、`autoCreate`（自动记账 or 仅提醒）、启用状态。
+
+**templates** — 记账模板（第二阶段），用于一键复用高频记账。
+
+**attachments** — 流水附件（第三阶段），存本地文件路径。
+
+### 4.2 不进 Room 的数据
+
+主题模式、主题色、货币符号、每月起始日、当前登录用户 id、当前账本 id、锁屏与生物识别开关 → DataStore Preferences。
+
+### 4.3 账期工具
+
+"每月起始日"统一由一个 `PeriodCalculator` 承担：输入时间戳 + `periodStartDay`，输出所属账期标识（如 `2026-09-05 ~ 2026-10-04`）。明细分组、图表聚合、预算周期必须全部走这个工具，禁止各页面自行计算，否则会出现统计口径不一致。
+
+## 5. 页面与功能规格
+
+### 5.1 整体结构
+
+```
+启动 → 检查登录态
+       ├─ 未登录 → 登录 / 注册
+       └─ 已登录 → 主界面
+                     ├─ NavigationBar：明细 | 图表 | 账单 | 我的
+                     └─ 悬浮 FAB（+）→ 快速记账
+```
+
+采用单 Activity + Navigation Compose 嵌套导航图，四个一级页面各自持有独立返回栈，切换 Tab 时保留各自的滚动位置与筛选状态。
+
+### 5.2 明细
+
+- 顶部：当前月收支结余卡片，支持左右切换月份。
+- 列表：按日分组，每组带日期头与当日小计；单条显示分类图标、分类名、备注、账户、金额（支出红/收入绿，颜色可在设置中关闭）。
+- 筛选：时间范围、分类（多选）、账户（多选）、收支类型、金额区间、关键词（备注/商家）。
+- 搜索入口独立于筛选，随时可唤起。
+- 长按进入多选模式，支持批量删除、批量改分类、批量改账户、批量加标签。
+- 左滑删除，删除后 Snackbar 提供撤销。
+- 点击进入详情，详情页可编辑、复制为一笔新流水、删除。
+
+### 5.3 图表
+
+- 时间维度切换：周 / 月 / 年 / 自定义区间，与"每月起始日"设置联动。
+- 收支趋势：柱状或折线对比，可选"仅支出 / 仅收入 / 收支对比"。
+- 分类占比：环形图 + 图例，点击某分类下钻到该类流水列表。
+- 分类排行：横向条形榜，显示金额与占比。
+- 资产变化：总资产随时间变化的折线，可按账户拆分。
+- 空数据状态要有明确引导，不能只显示空白图表。
+
+### 5.4 账单
+
+- **账本管理**：账本列表、新建、重命名、切换、排序、设置默认；当前账本全局生效。
+- **月度汇总**：本月收入、支出、结余、日均支出、环比与同比。
+- **预算**：总预算 + 分类预算的进度条，剩余额度、已用比例、超支高亮与预警。支持按 MONTH/WEEK/YEAR 周期设置。
+
+### 5.5 我的
+
+- 账户管理：增删改、排序、归档、设置初始余额与是否计入总资产；显示各账户当前余额。
+- 分类管理：一级/二级增删改、图标与颜色、排序、隐藏预置分类。
+- 预算设置、定期账单管理、标签管理。
+- 数据：导出（CSV/JSON）、导入、清空数据、数据库版本信息。
+- 安全：修改密码、应用锁（数字密码 / 生物识别）、自动锁定时长。
+- 外观：浅色 / 深色 / 跟随系统、主题色（含 Material You 动态取色）、金额颜色开关。
+- 其他：每月起始日、货币符号、日期格式、关于。
+
+### 5.6 记账流程（FAB）
+
+默认以 `ModalBottomSheet` 形式弹出快速记账，可一键展开为全屏编辑页补充更多字段。
+
+快速记账页包含：
+
+- 类型切换：支出 / 收入 / 转账。
+- 自定义数字键盘，支持 `+ - × ÷ =` 连续运算，支持"等于上一笔金额"。
+- 分类宫格（转账类型下隐藏分类，改为转出/转入账户选择）。
+- 账户选择器，默认使用上次使用的账户。
+- 日期快捷：今天 / 昨天 / 前天 + 日期时间选择器，时间默认当前。
+- 备注输入 + 常用备注标签（点击即填）。
+- 保存后停留在页面并可"再记一笔"，适合连续录入多笔。
+
+表单校验：金额必须大于 0；转账必须选择两个不同的账户；账户被归档时不允许新流水。未填必填项时保存按钮置灰而非弹错。
+
+## 6. 非功能需求
+
+**数据正确性（最高优先级）**
+
+- 金额一律用 `Long` 存分，禁止在计算链路中出现 `Double`/`Float`。
+- Room 导出 schema JSON 并纳入版本控制，任何表结构变更必须编写迁移并配套 `MigrationTestHelper` 测试。
+- 流水写入需在事务中完成，涉及账户余额的批量操作必须保证原子性。
+
+**安全**
+
+- 密码使用 PBKDF2WithHmacSHA256 + 随机盐存储，不提供密码找回，忘记密码只能重置（重置前需明确提示将清除该账号数据）。
+- 应用锁使用 BiometricPrompt，锁定时隐藏最近任务列表缩略图。
+- 不申请网络权限，导出的备份文件默认不含密码哈希。
+
+**性能**
+
+- 万级流水下明细滚动保持 60fps，统计查询走索引并使用 SQL 聚合而非内存计算。
+- 列表超过约 3 万条时再引入 Paging 3，前期不过度设计。
+
+**体验与无障碍**
+
+- 支持深色模式、动态取色、系统大字号、TalkBack 语义标签。
+- 所有危险操作（删除、清空、重置）二次确认，破坏性操作可撤销的尽量提供撤销。
+
+**测试**
+
+- DAO 层单元测试（含统计口径与账期计算）。
+- Repository/ViewModel 单元测试（覆盖转账、跨账期、超支等边界）。
+- 关键路径 Compose UI 测试：登录注册、记一笔、编辑流水、筛选。
+
+## 7. 分期计划
+
+**P0 工程骨架（已完成）**：Gradle 依赖与 Hilt/KSP 配置、主题体系、Navigation 骨架、四个 Tab 与 FAB 的空壳、Room 数据库与实体定义。
+
+**P1 账号体系**：注册登录、密码哈希、登录态保持、默认数据初始化（预置分类、默认现金账户、默认账本）、本地多账号数据隔离。
+
+**P2 记账闭环**：加号快速记账（含转账）、明细列表与分组小计、流水的增删改查、筛选与搜索。
+
+**P3 统计与预算**：图表页全部图表、账单页账本管理与月度汇总、预算设置与预警、每月起始日联动。
+
+**P4 完善**：我的页各二级功能、账户与分类管理、应用锁与生物识别、数据导出导入、主题与外观设置。
+
+**P5 增强**：定期账单与自动记账、记账模板、附件与图片、批量操作增强、数据导入市面账单 CSV。
+
+每期结束需保证工程可编译、可运行、无遗留崩溃，并补齐该期核心逻辑的单元测试。
+
+## 8. 验收标准（P2 结束时）
+
+1. 新用户注册后可直接记一笔支出，并在明细页看到该记录与当日小计。
+2. 记一笔转账后，转出账户减少、转入账户增加相同的金额，总资产不变。
+3. 编辑或删除一笔流水后，明细、账户余额、图表统计三处数据同步更新。
+4. 修改"每月起始日"（如改为 5 号）后，明细分组与月度汇总的账期随之改变且前后一致。
+5. 杀进程重启后，登录态与所有数据完整保留。
+
+## 9. 工程约定与版本约束
+
+### 9.1 包结构
+
+```
+top.tobin.xrecord
+├── XRecordApplication.kt        Hilt 入口
+├── MainActivity.kt              单 Activity
+├── core/util/                   跨模块纯逻辑（PeriodCalculator）
+├── data/local/
+│   ├── entity/                  Room 实体与 TypeConverter
+│   ├── dao/                     数据访问接口
+│   ├── XRecordDatabase.kt       数据库定义
+│   └── di/DatabaseModule.kt     Hilt 提供数据库与 DAO
+└── ui/
+    ├── navigation/              类型安全路由与一级页面定义
+    ├── components/              可复用 UI 组件
+    ├── feature/<页面>/           按页面分包
+    └── theme/                   Material 3 主题
+```
+
+### 9.2 已生效的硬性约束
+
+1. **Room schema 已纳入导出**：`app/schemas/` 下会随版本生成 JSON。任何实体改动都必须提升数据库版本号并编写 `Migration`，同时补齐迁移测试。
+2. **外键删除策略**：`transactions.accountId` 使用 `NO ACTION` 而非 `RESTRICT`。原因是约束在语句结束时才校验，这样"删除整个用户"的级联删除可以顺利完成；而单独删除一个仍有流水的账户依然会被数据库拒绝，符合"账户只归档不删除"的设计。
+3. **枚举以字符串落库**，不使用 `ordinal`，避免枚举顺序调整导致历史数据错位。
+4. **金额一律 `Long` 存分**，`transactions.amount` 恒为正数。
+5. **账期统一走 `PeriodCalculator`**，起始日上限为 28，`shift` 必须从账期起点推算，禁止对区间终点调用 `plusMonths`。
+6. **图标使用工程内矢量资源**（`res/drawable/ic_tab_*.xml`）。`material-icons-extended` 已停止跟随 Compose BOM 发布，且会把上千个图标类打进 APK——实测替换后 debug 包从 68MB 降到 34.4MB。
+
+### 9.3 版本约束
+
+当前工具链是 Kotlin 2.2（AGP 9.4 内置 Kotlin 编译器版本为 2.2.0），这带来两条约束：
+
+- **Vico 锁定在 3.2.3**。3.3.0 起使用 Kotlin 2.4 编译，其产物元数据超出当前编译器可读范围（上限 2.3.0），会直接编译失败。升级 Kotlin 工具链时才可放开。
+- **`gradle.properties` 需要 `android.disallowKotlinSourceSets=false`**。AGP 9 默认禁止通过 `kotlin.sourceSets` 追加源码目录，而 KSP（Room、Hilt 的注解处理器）依赖该机制。
+
+后续若要把 Kotlin 升到 2.4+，需要一并处理：显式应用 Kotlin Android 插件、匹配 KSP 版本、放开 Vico 版本，并重新验证 Hilt 插件兼容性。这件事值得单独作为一次任务，不要与其他功能改动混在一起。
+
+### 9.4 P0 验证结果
+
+- `./gradlew :app:assembleDebug` 构建通过，产出 debug APK。
+- `./gradlew :app:testDebugUnitTest` 通过，`PeriodCalculatorTest` 11 项用例全部通过，覆盖起始日为 1/5/28、平年与闰年二月、跨年与连续平移等边界。
+- Room 已生成 `XRecordDatabase_Impl`，schema 已导出至 `app/schemas/`。
+
+### 9.5 待处理
+
+工程当前**未纳入版本控制**（目录下没有 `.git`）。本地数据库类应用一旦开始迭代，表结构变更频繁，建议尽早 `git init` 并提交基线，否则迁移脚本写错时无法回滚比对。
