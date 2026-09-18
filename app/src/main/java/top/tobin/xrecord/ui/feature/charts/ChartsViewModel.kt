@@ -45,6 +45,8 @@ data class ChartsUiState(
     val isLoading: Boolean = true,
     val range: ChartRange = ChartRange.MONTH,
     val rangeLabel: String = "",
+    /** 横轴标签需要由区间起点推算，因此一并带出来。 */
+    val periodStart: LocalDate? = null,
     val categoryType: TransactionType = TransactionType.EXPENSE,
     val trend: List<TrendPoint> = emptyList(),
     val slices: List<CategorySlice> = emptyList(),
@@ -188,6 +190,7 @@ class ChartsViewModel @Inject constructor(
             isLoading = false,
             range = params.range,
             rangeLabel = ChartRangeCalculator.label(params.range, period, startDay),
+            periodStart = period.start,
             categoryType = params.categoryType,
             trend = buckets.mapIndexed { index, bucket ->
                 TrendPoint(

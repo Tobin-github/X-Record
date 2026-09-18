@@ -60,6 +60,7 @@ import kotlin.math.roundToLong
 import top.tobin.xrecord.R
 import top.tobin.xrecord.core.money.MoneyFormatter
 import top.tobin.xrecord.core.util.ChartRange
+import top.tobin.xrecord.core.util.ChartRangeCalculator
 import top.tobin.xrecord.data.local.entity.TransactionType
 import top.tobin.xrecord.ui.components.AmountSummaryRow
 import top.tobin.xrecord.ui.theme.amountColor
@@ -102,7 +103,18 @@ fun ChartsScreen(
             HorizontalDivider()
 
             SectionTitle(text = stringResource(R.string.charts_trend_title))
-            TrendChart(points = state.trend)
+            TrendChart(
+                points = state.trend,
+                axisLabel = { index ->
+                    val periodStart = state.periodStart
+                    if (periodStart == null) {
+                        // 数据未就绪时不会渲染图表，这里只为类型完整；返回下标而非空串
+                        index.toString()
+                    } else {
+                        ChartRangeCalculator.axisLabel(state.range, periodStart, index)
+                    }
+                },
+            )
 
             SectionTitle(text = stringResource(R.string.charts_category_title))
             CategoryTypeTabs(
@@ -177,7 +189,7 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun TrendChart(points: List<TrendPoint>) {
+private fun TrendChart(points: List<TrendPoint>, axisLabel: (Int) -> String) {
     // Vico 的每个系列都要求至少有一个数据点，数据还没加载完时先占位。
     // 空列表直接交给 columnModel 会抛 "Series can't be empty" 并让界面崩溃。
     if (points.isEmpty()) {
@@ -224,7 +236,8 @@ private fun TrendChart(points: List<TrendPoint>) {
         ),
         bottomAxis = HorizontalAxis.rememberBottom(
             valueFormatter = CartesianValueFormatter { _, value, _ ->
-                points.getOrNull(value.toInt())?.label.orEmpty()
+                // 兜底：Vico 不允许格式化器返回空串，一旦返回会直接崩溃
+                axisLabel(value.toInt()).ifBlank { value.toInt().toString() }
             },
         ),
     )

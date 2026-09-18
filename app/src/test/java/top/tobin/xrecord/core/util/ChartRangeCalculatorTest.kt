@@ -95,4 +95,43 @@ class ChartRangeCalculatorTest {
         assertEquals(11, ChartRangeCalculator.bucketIndex(buckets, LocalDate.of(2026, 12, 31)))
         assertEquals(-1, ChartRangeCalculator.bucketIndex(buckets, LocalDate.of(2027, 1, 1)))
     }
+
+    // 以下三项是崩溃回归测试：图表切换数据做动画时，Vico 会查询当前数据集之外的 x，
+    // 一旦标签格式化返回空串就会抛 IllegalStateException 并崩溃
+
+    @Test
+    fun `跨界下标也要产生标签而不是空串`() {
+        val monthPeriod = ChartRangeCalculator.range(ChartRange.MONTH, 0, startDay = 1, today = today)
+
+        // 从 31 天的月份切到 30 天时，动画期间会问到 x=30、x=31
+        val labels = listOf(-1, 0, 29, 30, 31, 100).map { index ->
+            ChartRangeCalculator.axisLabel(ChartRange.MONTH, monthPeriod.start, index)
+        }
+
+        labels.forEach { label ->
+            assert(label.isNotEmpty()) { "标签不能为空串，否则 Vico 会崩溃" }
+        }
+    }
+
+    @Test
+    fun `年维度下标越界时回绕到合理月份`() {
+        val period = ChartRangeCalculator.range(ChartRange.YEAR, 0, 1, today)
+
+        assertEquals("1月", ChartRangeCalculator.axisLabel(ChartRange.YEAR, period.start, 0))
+        assertEquals("12月", ChartRangeCalculator.axisLabel(ChartRange.YEAR, period.start, 11))
+        // 动画期间可能问到 12，回绕成 1 月而不是"13月"
+        assertEquals("1月", ChartRangeCalculator.axisLabel(ChartRange.YEAR, period.start, 12))
+    }
+
+    @Test
+    fun `坐标轴标签与分桶标签保持一致`() {
+        val period = ChartRangeCalculator.range(ChartRange.MONTH, 0, startDay = 5, today = today)
+
+        ChartRangeCalculator.buckets(ChartRange.MONTH, period).forEachIndexed { index, bucket ->
+            assertEquals(
+                bucket.label,
+                ChartRangeCalculator.axisLabel(ChartRange.MONTH, period.start, index),
+            )
+        }
+    }
 }

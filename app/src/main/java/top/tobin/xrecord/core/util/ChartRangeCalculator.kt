@@ -70,6 +70,31 @@ object ChartRangeCalculator {
             ChartRange.YEAR -> monthBuckets(period.start.year)
         }
 
+    /**
+     * 横轴标签。
+     *
+     * 必须对**任意**下标都能算出结果，绝不能返回空串：图表切换数据做动画时，
+     * Vico 会查询当前数据集之外的 x 值（例如从 31 天的月份切到 30 天的月份，
+     * 动画期间仍会询问 x=30）。此时若返回空串，Vico 会直接抛
+     * `IllegalStateException: CartesianValueFormatter.format returned a blank string`。
+     *
+     * 因此这里不查表，而是由日期直接推算，超出区间也能得到合理的标签。
+     */
+    fun axisLabel(range: ChartRange, periodStart: LocalDate, index: Int): String {
+        if (range == ChartRange.YEAR) {
+            return "${index.mod(MONTHS_IN_YEAR) + 1}月"
+        }
+        val date = periodStart.plusDays(index.toLong())
+        return when {
+            range == ChartRange.WEEK ->
+                DateTimeUtils.weekdayLabel(date).removePrefix("星期")
+
+            // 每月第一天带上月份，便于跨账期时辨认
+            index == 0 || date.dayOfMonth == 1 -> "${date.monthValue}/${date.dayOfMonth}"
+            else -> date.dayOfMonth.toString()
+        }
+    }
+
     fun bucketIndex(buckets: List<TrendBucket>, date: LocalDate): Int =
         buckets.indexOfFirst { it.contains(date) }
 
@@ -77,15 +102,12 @@ object ChartRangeCalculator {
         val result = mutableListOf<TrendBucket>()
         var date = period.start
         while (!date.isAfter(period.endInclusive)) {
-            val label = when {
-                // 一周只有 7 天，显示星期几更好认
-                range == ChartRange.WEEK ->
-                    DateTimeUtils.weekdayLabel(date).removePrefix("星期")
-
-                date.dayOfMonth == 1 || result.isEmpty() -> "${date.monthValue}/${date.dayOfMonth}"
-                else -> date.dayOfMonth.toString()
-            }
-            result += TrendBucket(label = label, start = date, endInclusive = date)
+            result += TrendBucket(
+                // 与坐标轴共用同一套标签逻辑，避免两处慢慢跑偏
+                label = axisLabel(range, period.start, result.size),
+                start = date,
+                endInclusive = date,
+            )
             date = date.plusDays(1)
         }
         return result
@@ -95,7 +117,7 @@ object ChartRangeCalculator {
         (1..MONTHS_IN_YEAR).map { month ->
             val start = LocalDate.of(year, month, 1)
             TrendBucket(
-                label = "${month}月",
+                label = axisLabel(ChartRange.YEAR, start, month - 1),
                 start = start,
                 endInclusive = start.withDayOfMonth(start.lengthOfMonth()),
             )
