@@ -25,7 +25,9 @@ android {
     buildTypes {
         release {
             optimization {
-                enable = false
+                // 开启 R8：压缩 + 混淆 + 字节码优化。
+                // 关闭时 src/main/keepRules 下的规则不会生效。
+                enable = true
             }
         }
     }

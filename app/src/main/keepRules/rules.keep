@@ -1,12 +1,18 @@
-# Add project specific R8 rules here.
-# AGP will combine all keep rule files in src/main/keepRules to pass to R8
+# 项目自有的 R8 规则。
 #
-# For more details, see
-#   https://d.android.com/r/tools/r8/keep-rules
+# AGP 会把 src/<变体>/keepRules 下所有 .keep 文件合并后交给 R8。
+# 只收集 *.keep 后缀；该目录下出现 .pro 或 .pgcfg 会导致构建直接失败。
+#
+# 依赖库自带的消费者规则会被 AGP 自动合并，不需要在此重复。本项目已确认：
+#   - androidx.room:room-runtime          自带 proguard.txt
+#   - kotlinx-serialization-core          自带 kotlinx-serialization-common.pro
+#     （已覆盖 @Serializable 的 Companion、$$serializer、INSTANCE.serializer()）
+#   - Hilt、Navigation Compose、Vico      无需额外规则
+# 因此这里只保留项目自身真正需要的规则，不照抄网上的通用模板——
+# 重复的规则不会让结果更安全，反而可能互相冲突。
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# 保留行号与源文件名。
+# R8 默认会把源文件名替换成 "SourceFile"，堆栈里的行号也会丢失；
+# 保留它们，混淆后的线上崩溃才有定位价值。
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

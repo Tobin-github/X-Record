@@ -326,6 +326,10 @@ top.tobin.xrecord
 36. **删除账号只能删当前登录账号，且必须依赖外键级联**。数据层要再校验一次 `currentUserId == userId`：删除其它账号意味着在不知道对方密码的情况下销毁其数据，与"本地多账号彼此隔离"直接冲突。整个账号名下的账本、账户、分类、流水、标签、预算、定期账单全部靠级联清除，逐表删除既容易遗漏也无法保证原子性。删除后清空登录态，根导航自动回到登录页。
 37. **破坏性操作的确认框必须给出具体数据量**，而不是笼统的"将删除全部数据"。删除账号的确认框会实时统计"N 笔流水、N 本账本、N 个账户、N 个分类"，用户在按下确认前能确切知道自己要失去什么。
 38. **Vico 的坐标轴标签格式化器绝不能返回空串，且必须对任意下标都能算出结果**。图表切换数据做动画时，Vico 会查询当前数据集之外的 x 值（从 31 天的月份切到 30 天的月份时仍会问 x=30）。早期实现是"从数据列表按下标取标签"，取不到就返回空串，直接导致 `IllegalStateException`。正确做法是由日期推算标签而不是查表，并在最外层保留一个非空的兜底。
+39. **keep 规则写在 `src/<变体>/keepRules/**.keep`，而不是 `proguard-rules.pro`**。AGP 只收集 `.keep` 后缀；该目录下出现 `.pro` 或 `.pgcfg` 会让构建**直接失败**。可以按变体分（main / debug / release / flavor），AGP 会全部合并。
+40. **不要照抄网上的通用 keep 规则模板**。依赖自带的消费者规则会被 AGP 自动合并——本项目已确认 Room（`proguard.txt`）、kotlinx-serialization（`kotlinx-serialization-common.pro`，完整覆盖 `@Serializable` 的 Companion、`$$serializer`、`INSTANCE.serializer()`）都自带；Hilt、Navigation Compose、Vico 不需要额外规则。重复手写不仅无益，还可能互相冲突。判断依据应当是"开启 R8 后跑一遍真实流程"，而不是抄一份模板。
+41. **`optimization.enable` 是所有收缩与混淆的总开关**。它为 `false` 时，`keepRules` 目录里的规则完全不生效（实测 release 构建里连 R8 任务都不会出现，只有普通的 dex 任务）。
+42. **发布包必须用自己的签名证书**。验证 R8 时用调试签名只是为了本机安装；`build.gradle.kts` 中 release 未配置签名，正式发布前必须补上，绝不能用调试签名发布。
 
 ### 9.3 版本约束
 
@@ -461,3 +465,22 @@ top.tobin.xrecord
 
 - 新增 3 项回归测试，其中一项专门断言"跨界下标（-1、29、30、31、100）也必须产生非空标签"。
 - 在用户真实数据上实测（含 8 月与 9 月两个账期的数据）：月维度从 9 月连点 6 次回到 3 月、再连点 7 次前进，跨越 28/30/31 天各种月份；周与年维度各反复前后切换多轮。全程 0 崩溃，进程持续存活。
+
+### 9.16 启用 R8 与 keep 规则
+
+此前 `release` 的 `optimization.enable = false`，R8 完全不运行（`assembleRelease --dry-run` 里没有任何 R8 任务，只有 `dexBuilderRelease`），所以 `keepRules` 目录是一份死配置。本次改为 `enable = true`，并重写了 `rules.keep`。
+
+**规则内容与依据**：先核实了各依赖自带的消费者规则（见第 40 条），确认序列化、Room 都不需要手写，因此只保留项目自身真正需要的一条——保留 `SourceFile,LineNumberTable`，让混淆后的崩溃堆栈仍有定位价值。
+
+**效果**：
+
+- 包体积从 debug 的 36.4 MB 降到 release 的 3.6 MB（约 90%），资源收缩也在同一开关下生效（`optimizeReleaseResources`）。
+- 混淆已生效：`MoneyFormatter → cg1`、`PasswordHasher → kt1`，而 `MainActivity`、`XRecordApplication` 因清单引用保留原名。
+- 规则确认被采纳：`app/build/outputs/mapping/release/configuration.txt` 第 967~968 行即为所写的两条；同一文件中 kotlinx-serialization 规则出现 22 处、Room 规则 7 处，证明消费者规则已自动合并。
+
+**运行时验证**（把 release 包装到模拟器实测，覆盖 R8 最容易出问题的反射与序列化路径）：
+
+- 冷启动正常，启动耗时 111 ms，明细页数据正确。
+- 遍历四个一级页面，以及账户管理、分类管理、外观三个二级页面；图表页切换周/月/年维度并反复前后翻页。
+- 记账写入正常（1,025.00 → 1,055.00），随后删除该测试记录，数据恢复为 1,025.00；账号切换弹层正常列出本机账号。
+- 全程 `ClassNotFoundException`、`NoClassDefFoundError`、`NoSuchMethodError`、`NoSuchFieldError`、`Unable to instantiate` **均为 0 条**，崩溃数为 0。
