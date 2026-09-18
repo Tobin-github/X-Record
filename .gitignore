@@ -1,6 +1,8 @@
 *.iml
 .gradle
 .kotlin
+# 本工程不使用 npm，忽略外部工具误生成的锁文件
+/package-lock.json
 /local.properties
 /.idea/caches
 /.idea/libraries
