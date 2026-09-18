@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -43,11 +43,13 @@ fun RegisterScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .imePadding()
+            // 必须让出系统栏：这块屏幕顶部有摄像头挖孔，不做内边距的话
+            // 返回按钮会被压在状态栏下面，点击事件被系统截走，表现为"点了没反应"
+            .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 32.dp),
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onNavigateToLogin) {
                 Icon(

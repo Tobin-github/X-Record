@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -39,11 +39,12 @@ fun LoginScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .imePadding()
+            // 与注册页保持一致：留出状态栏与导航栏，避免内容被系统栏遮挡
+            .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 32.dp),
     ) {
-        Spacer(modifier = Modifier.height(96.dp))
+        Spacer(modifier = Modifier.height(64.dp))
         Text(
             text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.headlineLarge,
