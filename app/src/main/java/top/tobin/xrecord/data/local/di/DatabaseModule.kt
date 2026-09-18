@@ -9,12 +9,14 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import top.tobin.xrecord.data.local.XRecordDatabase
+import top.tobin.xrecord.data.local.XRecordMigrations
 import top.tobin.xrecord.data.local.dao.AccountDao
 import top.tobin.xrecord.data.local.dao.BookDao
 import top.tobin.xrecord.data.local.dao.BudgetDao
 import top.tobin.xrecord.data.local.dao.CategoryDao
 import top.tobin.xrecord.data.local.dao.TransactionDao
 import top.tobin.xrecord.data.local.dao.UserDao
+import top.tobin.xrecord.data.local.dao.RecurringRuleDao
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -25,6 +27,7 @@ object DatabaseModule {
     fun provideDatabase(@ApplicationContext context: Context): XRecordDatabase =
         Room.databaseBuilder(context, XRecordDatabase::class.java, XRecordDatabase.NAME)
             // 表结构变更必须显式提供 Migration，禁止破坏性回退，见 docs/requirements.md
+            .addMigrations(*XRecordMigrations.ALL)
             .build()
 
     @Provides
@@ -44,4 +47,8 @@ object DatabaseModule {
 
     @Provides
     fun provideBudgetDao(database: XRecordDatabase): BudgetDao = database.budgetDao()
+
+    @Provides
+    fun provideRecurringRuleDao(database: XRecordDatabase): RecurringRuleDao =
+        database.recurringRuleDao()
 }

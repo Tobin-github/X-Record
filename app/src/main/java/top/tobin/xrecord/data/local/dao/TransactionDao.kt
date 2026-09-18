@@ -178,4 +178,7 @@ interface TransactionDao {
     /** 清空某个用户的全部流水。分类、账户、账本保留，用户的记账结构不用重建。 */
     @Query("DELETE FROM transactions WHERE userId = :userId")
     suspend fun deleteAllForUser(userId: Long)
+
+    @Query("SELECT * FROM transactions WHERE userId = :userId ORDER BY id ASC")
+    suspend fun findAllForUser(userId: Long): List<TransactionEntity>
 }

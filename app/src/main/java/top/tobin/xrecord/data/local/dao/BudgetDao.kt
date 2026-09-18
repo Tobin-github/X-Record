@@ -45,4 +45,10 @@ interface BudgetDao {
 
     @Delete
     suspend fun delete(budget: BudgetEntity)
+
+    @Query("SELECT * FROM budgets WHERE userId = :userId ORDER BY id ASC")
+    suspend fun findAllForUser(userId: Long): List<BudgetEntity>
+
+    @Query("DELETE FROM budgets WHERE userId = :userId")
+    suspend fun deleteAllForUser(userId: Long)
 }

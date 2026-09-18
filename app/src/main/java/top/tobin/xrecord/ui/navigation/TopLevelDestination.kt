@@ -26,6 +26,12 @@ data object AppearanceRoute
 data object AddAccountRoute
 
 @Serializable
+data object BackupRoute
+
+@Serializable
+data object RecurringRulesRoute
+
+@Serializable
 data object ChartsRoute
 
 @Serializable

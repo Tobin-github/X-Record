@@ -36,4 +36,7 @@ interface BookDao {
 
     @Query("UPDATE books SET isDefault = 0 WHERE userId = :userId")
     suspend fun clearDefault(userId: Long)
+
+    @Query("DELETE FROM books WHERE userId = :userId")
+    suspend fun deleteAllForUser(userId: Long)
 }

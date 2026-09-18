@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
 
 /**
  * 定期账单规则，由 WorkManager 按 [nextTriggerAt] 触发。
@@ -52,6 +53,19 @@ data class RecurringRuleEntity(
     val frequency: RecurringFrequency,
     /** 间隔倍数，例如 frequency = WEEKLY、interval = 2 表示每两周。 */
     val interval: Int = 1,
+    /**
+     * 锚定日（1~31），表示规则本意的"每月几号"。
+     *
+     * 不能只靠 nextTriggerAt 递推：1 月 31 日往后推一个月会被钳到 2 月 28 日，
+     * 再推就变成 3 月 28 日，规则会一路漂移。记住锚定日才能在短月钳位、
+     * 到大月重新回到 31 日。
+     *
+     * 必须显式声明 `defaultValue`：迁移是通过 `ALTER TABLE ... ADD COLUMN`
+     * 加的这一列，Room 会拿"实体期望的表结构"和"迁移后的实际结构"比对，
+     * 两边都带 `DEFAULT 1` 才能通过校验。
+     */
+    @ColumnInfo(defaultValue = "1")
+    val anchorDay: Int = 1,
     val remark: String? = null,
     val autoCreate: Boolean = false,
     val isEnabled: Boolean = true,

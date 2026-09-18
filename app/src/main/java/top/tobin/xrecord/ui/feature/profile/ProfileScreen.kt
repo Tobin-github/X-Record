@@ -55,6 +55,8 @@ fun ProfileScreen(
     onOpenCategories: () -> Unit,
     onOpenAppearance: () -> Unit,
     onAddAccount: () -> Unit,
+    onOpenRecurring: () -> Unit,
+    onOpenBackup: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
@@ -128,6 +130,10 @@ fun ProfileScreen(
             onClick = onOpenCategories,
         )
         SettingRow(
+            title = stringResource(R.string.profile_recurring),
+            onClick = onOpenRecurring,
+        )
+        SettingRow(
             title = stringResource(R.string.profile_period_start_day),
             hint = stringResource(R.string.profile_period_start_day_hint),
             value = stringResource(R.string.profile_period_start_day_value, periodStartDay),
@@ -139,6 +145,10 @@ fun ProfileScreen(
         SettingRow(
             title = stringResource(R.string.profile_appearance),
             onClick = onOpenAppearance,
+        )
+        SettingRow(
+            title = stringResource(R.string.profile_backup),
+            onClick = onOpenBackup,
         )
         SettingRow(
             title = stringResource(R.string.profile_clear_data),

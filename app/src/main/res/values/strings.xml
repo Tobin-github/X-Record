@@ -29,6 +29,61 @@
     <string name="profile_delete_account_action">删除</string>
     <string name="profile_deleted">账号已删除</string>
 
+    <string name="backup_title">数据备份</string>
+    <string name="backup_description">导出的文件包含当前账号的全部账本、账户、分类、流水、预算与定期账单，不含密码。</string>
+    <string name="backup_export">导出备份</string>
+    <string name="backup_export_hint">保存为 JSON 文件，可放到云盘或电脑上。</string>
+    <string name="backup_import">从备份恢复</string>
+    <string name="backup_import_hint">会用备份内容覆盖当前账号的全部数据，此操作无法撤销。</string>
+    <string name="backup_export_success">已导出备份</string>
+    <string name="backup_export_failed">导出失败，请换个位置再试</string>
+    <string name="backup_import_success">已恢复备份</string>
+    <string name="backup_error_invalid">这个文件不是有效的备份</string>
+    <string name="backup_error_unsupported">备份来自更新的版本，请先升级应用</string>
+    <string name="backup_error_broken">备份内容不完整，已中止导入</string>
+    <string name="backup_error_read">无法读取所选文件</string>
+    <string name="backup_import_confirm_title">覆盖当前数据？</string>
+    <string name="backup_import_confirm_message">将先清空当前账号的全部数据，再写入备份内容：</string>
+    <string name="backup_import_summary">%1$d 笔流水、%2$d 本账本、%3$d 个账户、%4$d 个分类</string>
+    <string name="backup_import_confirm_action">覆盖导入</string>
+
+    <string name="recurring_title">定期账单</string>
+    <string name="recurring_description">房租、订阅、工资这类固定收支可以在这里登记。开启自动记账后，到期时会自动生成流水；进入应用时会自动补上错过的期数。</string>
+    <string name="recurring_new">新建定期账单</string>
+    <string name="recurring_edit">编辑</string>
+    <string name="recurring_delete">删除</string>
+    <string name="recurring_delete_message">删除后不再自动生成流水，已生成的流水不受影响。</string>
+    <string name="recurring_empty">还没有定期账单</string>
+    <string name="recurring_name">名称</string>
+    <string name="recurring_amount">金额</string>
+    <string name="recurring_frequency">重复周期</string>
+    <string name="recurring_interval">间隔（每 N 个周期）</string>
+    <string name="recurring_next_date">下次日期</string>
+    <string name="recurring_next_at">下次 %1$s</string>
+    <string name="recurring_auto_create">自动记账</string>
+    <string name="recurring_auto_create_hint">到期时直接生成流水，关闭则只保存规则</string>
+    <string name="recurring_auto_create_on">自动记账</string>
+    <string name="recurring_every_day">每天</string>
+    <string name="recurring_every_week">每周</string>
+    <string name="recurring_every_month">每月</string>
+    <string name="recurring_every_year">每年</string>
+    <string name="recurring_every_n">每 %1$d %2$s</string>
+    <string name="recurring_unit_day">天</string>
+    <string name="recurring_unit_week">周</string>
+    <string name="recurring_unit_month">个月</string>
+    <string name="recurring_unit_year">年</string>
+    <string name="recurring_error_name">名称不能为空</string>
+    <string name="recurring_error_amount">请输入大于 0 的金额</string>
+    <string name="recurring_error_category">请选择分类</string>
+    <string name="recurring_error_account">请选择账户</string>
+    <string name="recurring_error_transfer_target">请选择转入账户</string>
+    <string name="recurring_error_transfer_same">转出与转入不能是同一个账户</string>
+    <string name="recurring_error_no_book">找不到可用账本</string>
+    <string name="recurring_error_unknown">保存失败，请重试</string>
+
+    <string name="profile_recurring">定期账单</string>
+    <string name="profile_backup">数据备份</string>
+
     <string name="auth_tagline">数据全部保存在本机，不联网、不上传</string>
 
     <string name="auth_login_title">登录</string>

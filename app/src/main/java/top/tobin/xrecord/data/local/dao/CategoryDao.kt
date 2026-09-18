@@ -78,4 +78,10 @@ interface CategoryDao {
 
     @Delete
     suspend fun delete(category: CategoryEntity)
+
+    @Query("SELECT * FROM categories WHERE userId = :userId ORDER BY parentId IS NOT NULL ASC, id ASC")
+    suspend fun findAllForUser(userId: Long): List<CategoryEntity>
+
+    @Query("DELETE FROM categories WHERE userId = :userId")
+    suspend fun deleteAllForUser(userId: Long)
 }

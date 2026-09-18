@@ -41,21 +41,25 @@ import top.tobin.xrecord.ui.feature.auth.RegisterScreen
 import top.tobin.xrecord.ui.feature.auth.SessionViewModel
 import top.tobin.xrecord.ui.feature.bills.BillsScreen
 import top.tobin.xrecord.ui.feature.accounts.AccountsScreen
+import top.tobin.xrecord.ui.feature.backup.BackupScreen
 import top.tobin.xrecord.ui.feature.categories.CategoriesScreen
 import top.tobin.xrecord.ui.feature.charts.ChartsScreen
 import top.tobin.xrecord.ui.feature.editor.QuickEntrySheet
 import top.tobin.xrecord.ui.feature.editor.TransactionEditorScreen
 import top.tobin.xrecord.ui.feature.profile.ProfileScreen
 import top.tobin.xrecord.ui.feature.records.RecordsScreen
+import top.tobin.xrecord.ui.feature.recurring.RecurringRulesScreen
 import top.tobin.xrecord.ui.navigation.BillsRoute
 import top.tobin.xrecord.ui.navigation.AccountsRoute
 import top.tobin.xrecord.ui.navigation.AddAccountRoute
 import top.tobin.xrecord.ui.navigation.AppearanceRoute
+import top.tobin.xrecord.ui.navigation.BackupRoute
 import top.tobin.xrecord.ui.navigation.CategoriesRoute
 import top.tobin.xrecord.ui.navigation.ChartsRoute
 import top.tobin.xrecord.ui.navigation.MainRoute
 import top.tobin.xrecord.ui.navigation.ProfileRoute
 import top.tobin.xrecord.ui.navigation.RecordsRoute
+import top.tobin.xrecord.ui.navigation.RecurringRulesRoute
 import top.tobin.xrecord.ui.navigation.TopLevelDestination
 import top.tobin.xrecord.ui.navigation.TransactionEditorRoute
 import top.tobin.xrecord.ui.feature.settings.AppearanceScreen
@@ -111,6 +115,8 @@ private fun MainNavHost(user: UserEntity) {
                 onOpenCategories = { navController.navigate(CategoriesRoute) },
                 onOpenAppearance = { navController.navigate(AppearanceRoute) },
                 onAddAccount = { navController.navigate(AddAccountRoute) },
+                onOpenRecurring = { navController.navigate(RecurringRulesRoute) },
+                onOpenBackup = { navController.navigate(BackupRoute) },
             )
         }
         composable<TransactionEditorRoute> {
@@ -132,6 +138,12 @@ private fun MainNavHost(user: UserEntity) {
                 showLoginLink = false,
             )
         }
+        composable<RecurringRulesRoute> {
+            RecurringRulesScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable<BackupRoute> {
+            BackupScreen(onNavigateBack = { navController.popBackStack() })
+        }
     }
 }
 
@@ -143,6 +155,8 @@ private fun MainScaffold(
     onOpenCategories: () -> Unit,
     onOpenAppearance: () -> Unit,
     onAddAccount: () -> Unit,
+    onOpenRecurring: () -> Unit,
+    onOpenBackup: () -> Unit,
 ) {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -205,6 +219,8 @@ private fun MainScaffold(
                     onOpenCategories = onOpenCategories,
                     onOpenAppearance = onOpenAppearance,
                     onAddAccount = onAddAccount,
+                    onOpenRecurring = onOpenRecurring,
+                    onOpenBackup = onOpenBackup,
                 )
             }
         }
