@@ -8,4 +8,35 @@
 
     <string name="action_add_transaction">记一笔</string>
     <string name="action_close">关闭</string>
+    <string name="action_back">返回</string>
+    <string name="action_confirm">确定</string>
+    <string name="action_cancel">取消</string>
+
+    <string name="profile_logout">退出登录</string>
+    <string name="profile_logout_title">退出登录</string>
+    <string name="profile_logout_message">退出后需要重新输入密码才能进入。本机数据不会被删除，其他账号的账本也互不可见。</string>
+
+    <string name="auth_tagline">数据全部保存在本机，不联网、不上传</string>
+
+    <string name="auth_login_title">登录</string>
+    <string name="auth_login_action">登录</string>
+    <string name="auth_to_register">还没有账号？立即注册</string>
+
+    <string name="auth_register_title">注册</string>
+    <string name="auth_register_action">注册并开始记账</string>
+    <string name="auth_to_login">已有账号？返回登录</string>
+
+    <string name="auth_username">用户名</string>
+    <string name="auth_username_hint">3-20 位字母、数字、下划线或中文</string>
+    <string name="auth_nickname">昵称（可选）</string>
+    <string name="auth_nickname_hint">留空则使用用户名</string>
+    <string name="auth_password">密码</string>
+    <string name="auth_confirm_password">确认密码</string>
+
+    <string name="auth_error_username_invalid">用户名需为 3-20 位字母、数字、下划线或中文</string>
+    <string name="auth_error_username_taken">该用户名已被占用</string>
+    <string name="auth_error_password_too_short">密码至少 6 位</string>
+    <string name="auth_error_password_mismatch">两次输入的密码不一致</string>
+    <string name="auth_error_credentials">用户名或密码错误</string>
+    <string name="auth_error_unknown">操作失败，请重试</string>
 </resources>

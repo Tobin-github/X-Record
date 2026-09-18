@@ -1,7 +1,9 @@
 package top.tobin.xrecord.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -13,9 +15,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -25,6 +30,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import top.tobin.xrecord.R
+import top.tobin.xrecord.data.repository.SessionState
+import top.tobin.xrecord.ui.feature.auth.AuthNavHost
+import top.tobin.xrecord.ui.feature.auth.SessionViewModel
 import top.tobin.xrecord.ui.feature.bills.BillsScreen
 import top.tobin.xrecord.ui.feature.charts.ChartsScreen
 import top.tobin.xrecord.ui.feature.editor.QuickEntrySheet
@@ -38,6 +46,30 @@ import top.tobin.xrecord.ui.navigation.TopLevelDestination
 
 @Composable
 fun XRecordApp() {
+    val sessionViewModel: SessionViewModel = hiltViewModel()
+    val sessionState by sessionViewModel.sessionState.collectAsStateWithLifecycle()
+
+    // 登录态是唯一的入口判断依据：登录成功后整个导航树被替换，
+    // 未登录界面会连同它的返回栈一起销毁，不存在"按返回键退回登录页"的问题。
+    when (sessionState) {
+        SessionState.Loading -> LoadingScreen()
+        SessionState.LoggedOut -> AuthNavHost()
+        is SessionState.LoggedIn -> MainScaffold()
+    }
+}
+
+@Composable
+private fun LoadingScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun MainScaffold() {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry?.destination

@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 import top.tobin.xrecord.data.local.entity.UserEntity
 
 @Dao
@@ -14,6 +15,9 @@ interface UserDao {
 
     @Query("SELECT * FROM users WHERE id = :userId LIMIT 1")
     suspend fun findById(userId: Long): UserEntity?
+
+    @Query("SELECT * FROM users WHERE id = :userId LIMIT 1")
+    fun observeById(userId: Long): Flow<UserEntity?>
 
     @Query("SELECT COUNT(*) FROM users")
     suspend fun count(): Int
