@@ -91,6 +91,7 @@
     <string name="security_change_pin">修改密码</string>
     <string name="security_biometric">生物识别解锁</string>
     <string name="security_biometric_hint">用指纹或人脸代替输入密码</string>
+    <string name="security_biometric_unavailable">此设备尚未录入指纹或人脸，请先在系统设置中录入</string>
     <string name="security_auto_lock">自动锁定</string>
     <string name="security_lock_now">立即锁定</string>
     <string name="security_timeout_now">立即</string>

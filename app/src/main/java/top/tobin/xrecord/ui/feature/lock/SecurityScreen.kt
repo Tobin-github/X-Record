@@ -106,29 +106,43 @@ fun SecurityScreen(
                     onClick = { pinDialog = PinDialogMode.Change },
                 )
 
-                if (viewModel.biometricAvailable) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.security_biometric),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            Text(
-                                text = stringResource(R.string.security_biometric_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(
-                            checked = config.biometricEnabled,
-                            onCheckedChange = viewModel::setBiometricEnabled,
+                // 设备不支持时也保留这一行，只是置灰并说明原因。
+                // 直接隐藏会让用户以为功能不存在，只能靠猜。
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.security_biometric),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (viewModel.biometricAvailable) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                        Text(
+                            text = if (viewModel.biometricAvailable) {
+                                stringResource(R.string.security_biometric_hint)
+                            } else {
+                                stringResource(R.string.security_biometric_unavailable)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (viewModel.biometricAvailable) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
                         )
                     }
+                    Switch(
+                        checked = config.biometricEnabled && viewModel.biometricAvailable,
+                        onCheckedChange = viewModel::setBiometricEnabled,
+                        enabled = viewModel.biometricAvailable,
+                    )
                 }
 
                 Box {
