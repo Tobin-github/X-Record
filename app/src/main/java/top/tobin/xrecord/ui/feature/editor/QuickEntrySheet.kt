@@ -45,7 +45,7 @@ fun QuickEntrySheet(
     var showSavedNotice by remember { mutableStateOf(false) }
 
     // 每次打开面板都从干净的状态开始，避免上次没保存的内容残留
-    LaunchedEffect(Unit) { viewModel.prepareForNextEntry() }
+    LaunchedEffect(Unit) { viewModel.startNewEntry() }
 
     LaunchedEffect(state.savedTick) {
         if (state.savedTick > 0) {

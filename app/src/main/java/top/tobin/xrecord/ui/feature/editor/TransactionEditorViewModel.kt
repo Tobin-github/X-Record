@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import top.tobin.xrecord.core.money.AmountInput
 import top.tobin.xrecord.core.money.MoneyFormatter
+import top.tobin.xrecord.core.util.DateTimeUtils
 import top.tobin.xrecord.data.local.dao.AccountWithBalance
 import top.tobin.xrecord.data.local.entity.CategoryEntity
 import top.tobin.xrecord.data.local.entity.CategoryType
@@ -194,14 +195,41 @@ class TransactionEditorViewModel @Inject constructor(
     }
 
     /**
+     * 打开面板时重置为一次全新的记账：金额、备注清空，日期回到此刻。
+     */
+    fun startNewEntry() {
+        _uiState.update {
+            it.copy(
+                expression = "0",
+                amountCents = 0L,
+                remark = "",
+                occurredAt = System.currentTimeMillis(),
+                error = null,
+            )
+        }
+    }
+
+    /**
      * 保存成功后为"再记一笔"做准备。
      *
      * 只清空金额与备注，保留类型、分类、账户和日期——连续录入同一天的几笔餐饮时，
      * 用户不必每次都重新选一遍。
+     *
+     * 日期保留但**时间刷新到此刻**：面板 ViewModel 的生命周期跟主界面一样长，
+     * 若沿用旧时间，同一会话里所有流水都会带着最初打开面板那一刻的时间戳。
      */
     fun prepareForNextEntry() {
         _uiState.update {
-            it.copy(expression = "0", amountCents = 0L, remark = "", error = null)
+            it.copy(
+                expression = "0",
+                amountCents = 0L,
+                remark = "",
+                occurredAt = DateTimeUtils.withDate(
+                    epochMillis = System.currentTimeMillis(),
+                    date = DateTimeUtils.toLocalDate(it.occurredAt),
+                ),
+                error = null,
+            )
         }
     }
 

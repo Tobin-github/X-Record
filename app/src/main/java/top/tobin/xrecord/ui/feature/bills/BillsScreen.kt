@@ -2,6 +2,7 @@ package top.tobin.xrecord.ui.feature.bills
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -330,7 +332,12 @@ private fun BookRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onSelect)
+            // 账本也是单选：用 selectable 才能把"当前账本"暴露给读屏
+            .selectable(
+                selected = selected,
+                onClick = onSelect,
+                role = Role.RadioButton,
+            )
             .padding(horizontal = 8.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

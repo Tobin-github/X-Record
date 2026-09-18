@@ -134,12 +134,12 @@ class AuthRepository @Inject constructor(
 
     suspend fun login(username: String, password: String): AuthResult = withContext(ioDispatcher) {
         val normalizedUsername = normalizeUsername(username)
-        val user = userDao.findByUsername(normalizedUsername)
-
-        // 用户名不存在与密码错误返回同一个结果，避免暴露哪些用户名已被占用
-        if (user == null) {
-            return@withContext AuthResult.Failure(AuthError.CREDENTIALS_INVALID)
-        }
+        val user =
+            userDao.findByUsername(normalizedUsername) ?:
+            // 用户名不存在与密码错误返回同一个结果，避免暴露哪些用户名已被占用
+            return@withContext AuthResult.Failure(
+                AuthError.CREDENTIALS_INVALID
+            )
 
         val matched = PasswordHasher.verify(
             password = password.toCharArray(),

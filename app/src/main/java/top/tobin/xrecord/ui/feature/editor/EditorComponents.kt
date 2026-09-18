@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -39,7 +40,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
@@ -213,20 +217,31 @@ private fun CategoryCell(
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            // 用 selectable 而不是 clickable：单选控件需要把选中态暴露给无障碍服务，
+            // 否则读屏用户完全无法知道当前选中了哪个分类
+            .selectable(
+                selected = selected,
+                onClick = onClick,
+                role = Role.RadioButton,
+            )
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // 选中态用"实心圆 + 一圈浅色光晕"双层表达。
+        // 之前只有填充深浅的差别，在浅色底上几乎看不出来，用户以为点击没生效。
         Box(
             modifier = Modifier
-                .size(42.dp)
+                .size(46.dp)
                 .clip(CircleShape)
-                .background(if (selected) color else color.copy(alpha = 0.15f)),
+                .background(if (selected) color.copy(alpha = 0.25f) else Color.Transparent)
+                .padding(3.dp)
+                .clip(CircleShape)
+                .background(if (selected) color else color.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = category.name.take(1),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 color = if (selected) color.onColorFor() else color,
             )
         }
@@ -234,6 +249,7 @@ private fun CategoryCell(
         Text(
             text = category.name,
             style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             color = if (selected) {
