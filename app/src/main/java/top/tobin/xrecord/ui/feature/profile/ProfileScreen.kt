@@ -62,6 +62,7 @@ fun ProfileScreen(
     val cleared by viewModel.cleared.collectAsStateWithLifecycle()
     val localAccounts by viewModel.localAccounts.collectAsStateWithLifecycle()
     val switchFailed by viewModel.switchFailed.collectAsStateWithLifecycle()
+    val pendingDelete by viewModel.pendingDelete.collectAsStateWithLifecycle()
 
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showPeriodStartDialog by remember { mutableStateOf(false) }
@@ -159,6 +160,17 @@ fun ProfileScreen(
                 .padding(horizontal = 20.dp),
         ) {
             Text(text = stringResource(R.string.profile_logout))
+        }
+        TextButton(
+            onClick = { viewModel.requestDeleteAccount(user.id) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 4.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.profile_delete_account),
+                color = MaterialTheme.colorScheme.error,
+            )
         }
         Spacer(modifier = Modifier.height(32.dp))
     }
@@ -267,6 +279,42 @@ fun ProfileScreen(
                 onAddAccount()
             },
             onDismiss = { showAccountSwitcher = false },
+        )
+    }
+
+    pendingDelete?.let { summary ->
+        AlertDialog(
+            onDismissRequest = viewModel::cancelDeleteAccount,
+            title = { Text(text = stringResource(R.string.profile_delete_account)) },
+            text = {
+                Text(
+                    text = if (summary.isNotEmpty) {
+                        stringResource(
+                            R.string.profile_delete_account_message,
+                            user.username,
+                            summary.transactionCount,
+                            summary.bookCount,
+                            summary.accountCount,
+                            summary.categoryCount,
+                        )
+                    } else {
+                        stringResource(R.string.profile_delete_account_simple, user.username)
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmDeleteAccount(user.id) }) {
+                    Text(
+                        text = stringResource(R.string.profile_delete_account_action),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::cancelDeleteAccount) {
+                    Text(text = stringResource(R.string.action_cancel))
+                }
+            },
         )
     }
 

@@ -21,6 +21,17 @@ data class LocalAccount(
     val lastLoginAt: Long?,
 )
 
+/** 账号名下的数据规模，用于删除前的确认提示。 */
+data class AccountDataSummary(
+    val transactionCount: Int,
+    val bookCount: Int,
+    val accountCount: Int,
+    val categoryCount: Int,
+) {
+    val isNotEmpty: Boolean
+        get() = transactionCount > 0 || bookCount > 0 || accountCount > 0 || categoryCount > 0
+}
+
 @Dao
 interface UserDao {
     @Query("SELECT * FROM users WHERE username = :username LIMIT 1")
@@ -58,4 +69,23 @@ interface UserDao {
 
     @Delete
     suspend fun delete(user: UserEntity)
+
+    /**
+     * 删除账号。其名下的账本、账户、分类、流水、标签、预算与定期账单
+     * 依靠外键级联一并清除——这是删除账号唯一可靠的实现方式，
+     * 逐表删除既容易遗漏，也无法保证原子性。
+     */
+    @Query("DELETE FROM users WHERE id = :userId")
+    suspend fun deleteById(userId: Long)
+
+    @Query(
+        """
+        SELECT
+            (SELECT COUNT(*) FROM transactions WHERE userId = :userId) AS transactionCount,
+            (SELECT COUNT(*) FROM books WHERE userId = :userId) AS bookCount,
+            (SELECT COUNT(*) FROM accounts WHERE userId = :userId) AS accountCount,
+            (SELECT COUNT(*) FROM categories WHERE userId = :userId) AS categoryCount
+        """,
+    )
+    suspend fun dataSummary(userId: Long): AccountDataSummary
 }

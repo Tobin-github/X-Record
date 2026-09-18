@@ -8,6 +8,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -17,6 +18,7 @@ import top.tobin.xrecord.core.security.PasswordHasher
 import top.tobin.xrecord.data.local.XRecordDatabase
 import top.tobin.xrecord.data.local.dao.UserDao
 import top.tobin.xrecord.data.local.dao.LocalAccount
+import top.tobin.xrecord.data.local.dao.AccountDataSummary
 import top.tobin.xrecord.data.local.entity.UserEntity
 import top.tobin.xrecord.data.preferences.SettingsDataSource
 
@@ -188,6 +190,31 @@ class AuthRepository @Inject constructor(
 
     suspend fun logout() {
         settings.setCurrentUserId(null)
+    }
+
+    suspend fun dataSummary(userId: Long): AccountDataSummary =
+        withContext(ioDispatcher) { userDao.dataSummary(userId) }
+
+    /**
+     * 删除账号及其全部数据，并退出登录。
+     *
+     * 只允许删除当前登录的账号：删除其它账号意味着在不知道对方密码的情况下销毁其数据，
+     * 这与"本地多账号彼此隔离"的设计直接冲突。此处做一次服务端（数据层）校验，
+     * 即便将来界面上出现疏漏也不会误删他人数据。
+     *
+     * @return 是否真正执行了删除
+     */
+    suspend fun deleteCurrentAccount(userId: Long): Boolean = withContext(ioDispatcher) {
+        if (settings.currentUserId.first() != userId) {
+            return@withContext false
+        }
+
+        database.withTransaction { userDao.deleteById(userId) }
+
+        // 数据库事务提交后再清登录态：即便这一步失败，会话流发现用户已不存在
+        // 也会回落到未登录态，不会停在空白主界面
+        settings.setCurrentUserId(null)
+        true
     }
 
     /** 统一小写并去空格，让登录名大小写不敏感，显示名交给昵称。 */

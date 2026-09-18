@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import top.tobin.xrecord.data.local.dao.LocalAccount
+import top.tobin.xrecord.data.local.dao.AccountDataSummary
 import top.tobin.xrecord.data.repository.AuthResult
 import top.tobin.xrecord.data.preferences.SettingsDataSource
 import top.tobin.xrecord.data.repository.AuthRepository
@@ -64,6 +65,28 @@ class ProfileViewModel @Inject constructor(
 
     fun clearSwitchError() {
         _switchFailed.value = false
+    }
+
+    /** 删除确认框需要展示的数据规模；不为 null 时表示确认框处于打开状态。 */
+    private val _pendingDelete = MutableStateFlow<AccountDataSummary?>(null)
+    val pendingDelete: StateFlow<AccountDataSummary?> = _pendingDelete.asStateFlow()
+
+    fun requestDeleteAccount(userId: Long) {
+        viewModelScope.launch {
+            _pendingDelete.value = authRepository.dataSummary(userId)
+        }
+    }
+
+    fun cancelDeleteAccount() {
+        _pendingDelete.value = null
+    }
+
+    fun confirmDeleteAccount(userId: Long) {
+        viewModelScope.launch {
+            _pendingDelete.value = null
+            authRepository.deleteCurrentAccount(userId)
+            // 删除成功后会话被清空，根导航会自动切回登录页
+        }
     }
 
     fun setPeriodStartDay(day: Int) {
