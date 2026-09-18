@@ -2,6 +2,7 @@ package top.tobin.xrecord.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -13,6 +14,20 @@ import top.tobin.xrecord.data.local.entity.TransactionType
 data class CategorySum(
     val categoryId: Long?,
     val total: Long,
+)
+
+/**
+ * 流水及其展示所需的关联信息。
+ *
+ * 一次 JOIN 取出分类名与账户名，避免列表逐条回查造成的 N+1 查询。
+ */
+data class TransactionDetail(
+    @Embedded val transaction: TransactionEntity,
+    val categoryName: String?,
+    val categoryIcon: String?,
+    val categoryColor: String?,
+    val accountName: String,
+    val toAccountName: String?,
 )
 
 @Dao
@@ -34,6 +49,50 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE id = :transactionId LIMIT 1")
     suspend fun findById(transactionId: Long): TransactionEntity?
+
+    @Query(
+        """
+        SELECT t.*,
+               c.name AS categoryName,
+               c.icon AS categoryIcon,
+               c.color AS categoryColor,
+               a.name AS accountName,
+               ta.name AS toAccountName
+        FROM transactions t
+        LEFT JOIN categories c ON c.id = t.categoryId
+        LEFT JOIN accounts a ON a.id = t.accountId
+        LEFT JOIN accounts ta ON ta.id = t.toAccountId
+        WHERE t.id = :transactionId
+        LIMIT 1
+        """,
+    )
+    fun observeDetail(transactionId: Long): Flow<TransactionDetail?>
+
+    @Query(
+        """
+        SELECT t.*,
+               c.name AS categoryName,
+               c.icon AS categoryIcon,
+               c.color AS categoryColor,
+               a.name AS accountName,
+               ta.name AS toAccountName
+        FROM transactions t
+        LEFT JOIN categories c ON c.id = t.categoryId
+        LEFT JOIN accounts a ON a.id = t.accountId
+        LEFT JOIN accounts ta ON ta.id = t.toAccountId
+        WHERE t.userId = :userId
+          AND t.bookId = :bookId
+          AND t.occurredAt >= :startInclusive
+          AND t.occurredAt < :endExclusive
+        ORDER BY t.occurredAt DESC, t.id DESC
+        """,
+    )
+    fun observeDetailsInRange(
+        userId: Long,
+        bookId: Long,
+        startInclusive: Long,
+        endExclusive: Long,
+    ): Flow<List<TransactionDetail>>
 
     /**
      * 按发生时间倒序查询区间内的流水。

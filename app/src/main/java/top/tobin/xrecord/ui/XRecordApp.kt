@@ -9,10 +9,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,13 +39,16 @@ import top.tobin.xrecord.ui.feature.auth.SessionViewModel
 import top.tobin.xrecord.ui.feature.bills.BillsScreen
 import top.tobin.xrecord.ui.feature.charts.ChartsScreen
 import top.tobin.xrecord.ui.feature.editor.QuickEntrySheet
+import top.tobin.xrecord.ui.feature.editor.TransactionEditorScreen
 import top.tobin.xrecord.ui.feature.profile.ProfileScreen
 import top.tobin.xrecord.ui.feature.records.RecordsScreen
 import top.tobin.xrecord.ui.navigation.BillsRoute
 import top.tobin.xrecord.ui.navigation.ChartsRoute
+import top.tobin.xrecord.ui.navigation.MainRoute
 import top.tobin.xrecord.ui.navigation.ProfileRoute
 import top.tobin.xrecord.ui.navigation.RecordsRoute
 import top.tobin.xrecord.ui.navigation.TopLevelDestination
+import top.tobin.xrecord.ui.navigation.TransactionEditorRoute
 
 @Composable
 fun XRecordApp() {
@@ -54,7 +60,7 @@ fun XRecordApp() {
     when (sessionState) {
         SessionState.Loading -> LoadingScreen()
         SessionState.LoggedOut -> AuthNavHost()
-        is SessionState.LoggedIn -> MainScaffold()
+        is SessionState.LoggedIn -> MainNavHost()
     }
 }
 
@@ -68,11 +74,40 @@ private fun LoadingScreen() {
     }
 }
 
+/**
+ * 登录后的根导航。
+ *
+ * 编辑页放在这一层而不是四个 Tab 的导航图里，这样它是真正的全屏页面，
+ * 不会出现"编辑流水时底部还挂着导航栏"的别扭效果。
+ */
 @Composable
-private fun MainScaffold() {
+private fun MainNavHost() {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = MainRoute,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        composable<MainRoute> {
+            MainScaffold(
+                onOpenTransaction = { transactionId ->
+                    navController.navigate(TransactionEditorRoute(transactionId))
+                },
+            )
+        }
+        composable<TransactionEditorRoute> {
+            TransactionEditorScreen(onNavigateBack = { navController.popBackStack() })
+        }
+    }
+}
+
+@Composable
+private fun MainScaffold(onOpenTransaction: (Long) -> Unit) {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentBackStackEntry?.destination
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var showQuickEntry by rememberSaveable { mutableStateOf(false) }
 
@@ -107,13 +142,19 @@ private fun MainScaffold() {
                 )
             }
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = RecordsRoute,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable<RecordsRoute> { RecordsScreen() }
+            composable<RecordsRoute> {
+                RecordsScreen(
+                    snackbarHostState = snackbarHostState,
+                    onOpenTransaction = onOpenTransaction,
+                )
+            }
             composable<ChartsRoute> { ChartsScreen() }
             composable<BillsRoute> { BillsScreen() }
             composable<ProfileRoute> { ProfileScreen() }

@@ -9,6 +9,10 @@ import top.tobin.xrecord.R
 @Serializable
 data object RecordsRoute
 
+/** 主界面（底部四个 Tab 的外壳），与编辑页同级。 */
+@Serializable
+data object MainRoute
+
 @Serializable
 data object ChartsRoute
 

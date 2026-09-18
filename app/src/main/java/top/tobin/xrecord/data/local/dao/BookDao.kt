@@ -22,6 +22,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE userId = :userId AND isDefault = 1 LIMIT 1")
     suspend fun findDefault(userId: Long): BookEntity?
 
+    @Query("SELECT * FROM books WHERE userId = :userId AND isDefault = 1 LIMIT 1")
+    fun observeDefault(userId: Long): Flow<BookEntity?>
+
     @Insert
     suspend fun insert(book: BookEntity): Long
 

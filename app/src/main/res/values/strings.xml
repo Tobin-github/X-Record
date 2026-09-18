@@ -39,4 +39,42 @@
     <string name="auth_error_password_mismatch">两次输入的密码不一致</string>
     <string name="auth_error_credentials">用户名或密码错误</string>
     <string name="auth_error_unknown">操作失败，请重试</string>
+
+    <string name="editor_type_expense">支出</string>
+    <string name="editor_type_income">收入</string>
+    <string name="editor_type_transfer">转账</string>
+    <string name="editor_account">账户</string>
+    <string name="editor_account_from">转出账户</string>
+    <string name="editor_account_to">转入账户</string>
+    <string name="editor_remark">备注</string>
+    <string name="editor_remark_hint">点此添加备注</string>
+    <string name="editor_save">保存</string>
+    <string name="editor_saved">已记账</string>
+    <string name="editor_title_edit">编辑流水</string>
+    <string name="editor_account_archived">%1$s（已归档）</string>
+    <string name="editor_pick_account">选择账户</string>
+    <string name="editor_pick_date">选择日期</string>
+    <string name="editor_pick_other_date">选择其他日期</string>
+
+    <string name="editor_error_amount">请输入大于 0 的金额</string>
+    <string name="editor_error_category">请选择分类</string>
+    <string name="editor_error_account">请选择账户</string>
+    <string name="editor_error_transfer_target">请选择转入账户</string>
+    <string name="editor_error_transfer_same">转出与转入不能是同一个账户</string>
+    <string name="editor_error_no_book">找不到默认账本</string>
+    <string name="editor_error_unknown">保存失败，请重试</string>
+
+    <string name="records_income">收入</string>
+    <string name="records_expense">支出</string>
+    <string name="records_balance">结余</string>
+    <string name="records_empty">这个账期还没有记账</string>
+    <string name="records_empty_hint">点击右下角的加号记第一笔</string>
+    <string name="records_deleted">已删除一笔流水</string>
+    <string name="records_undo">撤销</string>
+    <string name="records_prev_period">上一个账期</string>
+    <string name="records_next_period">下一个账期</string>
+    <string name="records_transfer_format">%1$s → %2$s</string>
+    <string name="records_delete">删除</string>
+    <string name="records_uncategorized">未分类</string>
+    <string name="records_transfer">转账</string>
 </resources>

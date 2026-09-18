@@ -74,6 +74,9 @@ class AuthRepository @Inject constructor(
         .onStart { emit(SessionState.Loading) }
         .distinctUntilChanged()
 
+    /** 当前登录用户 id，未登录为 null。业务仓库只依赖这个值，不关心用户对象本身。 */
+    val currentUserId: Flow<Long?> = settings.currentUserId
+
     suspend fun register(
         username: String,
         nickname: String,
