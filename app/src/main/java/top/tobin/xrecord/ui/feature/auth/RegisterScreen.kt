@@ -34,7 +34,9 @@ import top.tobin.xrecord.R
 
 @Composable
 fun RegisterScreen(
-    onNavigateToLogin: () -> Unit,
+    onNavigateBack: () -> Unit,
+    /** 从已登录状态下"添加账号"进入时，底部的"返回登录"文案不适用，可以关掉。 */
+    showLoginLink: Boolean = true,
     modifier: Modifier = Modifier,
     viewModel: RegisterViewModel = hiltViewModel(),
 ) {
@@ -51,7 +53,7 @@ fun RegisterScreen(
     ) {
         Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onNavigateToLogin) {
+            IconButton(onClick = onNavigateBack) {
                 Icon(
                     painter = painterResource(R.drawable.ic_arrow_back),
                     contentDescription = stringResource(R.string.action_back),
@@ -129,12 +131,14 @@ fun RegisterScreen(
         )
 
         Spacer(modifier = Modifier.height(8.dp))
-        TextButton(
-            onClick = onNavigateToLogin,
-            enabled = !uiState.isSubmitting,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        ) {
-            Text(text = stringResource(R.string.auth_to_login))
+        if (showLoginLink) {
+            TextButton(
+                onClick = onNavigateBack,
+                enabled = !uiState.isSubmitting,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) {
+                Text(text = stringResource(R.string.auth_to_login))
+            }
         }
 
         Spacer(modifier = Modifier.height(48.dp))

@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import top.tobin.xrecord.core.di.IoDispatcher
 import top.tobin.xrecord.data.local.XRecordDatabase
@@ -39,6 +40,16 @@ class BookRepository @Inject constructor(
     fun observeBooks(userId: Long): Flow<List<BookEntity>> = bookDao.observeBooks(userId)
 
     /**
+     * 当前生效账本的一次性快照，供写入流水时使用。
+     *
+     * 与 [observeCurrentBook] 共用同一套回落规则，避免"看的是一本、写的却是另一本"。
+     */
+    suspend fun resolveCurrentBook(userId: Long): BookEntity? = withContext(ioDispatcher) {
+        val selectedId = settings.currentBookId.first()
+        selectCurrent(bookDao.findBooks(userId), selectedId)
+    }
+
+    /**
      * 当前生效的账本。
      *
      * 用户选中的账本可能已被删除，此时回落到默认账本；默认账本也没了就取第一本，
@@ -47,10 +58,14 @@ class BookRepository @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     fun observeCurrentBook(userId: Long): Flow<BookEntity?> =
         combine(bookDao.observeBooks(userId), settings.currentBookId) { books, selectedId ->
-            books.firstOrNull { it.id == selectedId }
-                ?: books.firstOrNull { it.isDefault }
-                ?: books.firstOrNull()
+            selectCurrent(books, selectedId)
         }
+
+    /** 用户选中的账本可能已被删除：依次回落到默认账本、第一本账本。 */
+    private fun selectCurrent(books: List<BookEntity>, selectedId: Long?): BookEntity? =
+        books.firstOrNull { it.id == selectedId }
+            ?: books.firstOrNull { it.isDefault }
+            ?: books.firstOrNull()
 
     suspend fun selectBook(bookId: Long) {
         settings.setCurrentBookId(bookId)

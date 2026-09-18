@@ -13,7 +13,6 @@ import kotlinx.coroutines.withContext
 import top.tobin.xrecord.core.di.IoDispatcher
 import top.tobin.xrecord.core.util.AccountingPeriod
 import top.tobin.xrecord.data.local.XRecordDatabase
-import top.tobin.xrecord.data.local.dao.BookDao
 import top.tobin.xrecord.data.local.dao.TransactionDao
 import top.tobin.xrecord.data.local.dao.TransactionDetail
 import top.tobin.xrecord.data.local.entity.TransactionEntity
@@ -51,7 +50,7 @@ sealed interface SaveTransactionResult {
 class TransactionRepository @Inject constructor(
     private val database: XRecordDatabase,
     private val transactionDao: TransactionDao,
-    private val bookDao: BookDao,
+    private val bookRepository: BookRepository,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
 
@@ -79,13 +78,18 @@ class TransactionRepository @Inject constructor(
         withContext(ioDispatcher) {
             validate(draft)?.let { return@withContext SaveTransactionResult.Failure(it) }
 
-            val bookId = bookDao.findDefault(userId)?.id
-                ?: return@withContext SaveTransactionResult.Failure(TransactionError.NO_DEFAULT_BOOK)
+            val existing = draft.id?.let { transactionDao.findById(it) }
+
+            // 新增写进"当前账本"；编辑保持原账本不变，
+            // 否则在旅行账本里改一笔账会被悄悄搬回日常账本
+            val bookId = existing?.bookId ?: bookRepository.resolveCurrentBook(userId)?.id
+                ?: return@withContext SaveTransactionResult.Failure(
+                    TransactionError.NO_DEFAULT_BOOK,
+                )
 
             val now = System.currentTimeMillis()
             try {
                 val transactionId = database.withTransaction {
-                    val existing = draft.id?.let { transactionDao.findById(it) }
                     val entity = TransactionEntity(
                         id = existing?.id ?: 0L,
                         userId = userId,

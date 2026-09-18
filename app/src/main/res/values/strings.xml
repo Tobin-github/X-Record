@@ -16,6 +16,13 @@
     <string name="profile_logout_title">退出登录</string>
     <string name="profile_logout_message">退出后需要重新输入密码才能进入。本机数据不会被删除，其他账号的账本也互不可见。</string>
 
+    <string name="profile_switch_account">切换账号</string>
+    <string name="profile_current_account">当前</string>
+    <string name="profile_add_account">添加账号</string>
+    <string name="profile_switch_password_title">登录 %1$s</string>
+    <string name="profile_switch_error">密码错误，请重试</string>
+    <string name="profile_switch_action">登录</string>
+
     <string name="auth_tagline">数据全部保存在本机，不联网、不上传</string>
 
     <string name="auth_login_title">登录</string>

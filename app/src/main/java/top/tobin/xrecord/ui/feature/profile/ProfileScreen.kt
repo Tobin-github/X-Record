@@ -1,6 +1,8 @@
 package top.tobin.xrecord.ui.feature.profile
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,9 +10,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -28,14 +34,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import top.tobin.xrecord.BuildConfig
 import top.tobin.xrecord.R
 import top.tobin.xrecord.data.local.entity.UserEntity
+import top.tobin.xrecord.data.local.dao.LocalAccount
 
 @Composable
 fun ProfileScreen(
@@ -44,15 +54,20 @@ fun ProfileScreen(
     onOpenAccounts: () -> Unit,
     onOpenCategories: () -> Unit,
     onOpenAppearance: () -> Unit,
+    onAddAccount: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val periodStartDay by viewModel.periodStartDay.collectAsStateWithLifecycle()
     val cleared by viewModel.cleared.collectAsStateWithLifecycle()
+    val localAccounts by viewModel.localAccounts.collectAsStateWithLifecycle()
+    val switchFailed by viewModel.switchFailed.collectAsStateWithLifecycle()
 
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showPeriodStartDialog by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showAccountSwitcher by remember { mutableStateOf(false) }
+    var pendingSwitchAccount by remember { mutableStateOf<LocalAccount?>(null) }
 
     val clearedMessage = stringResource(R.string.profile_cleared)
     LaunchedEffect(cleared) {
@@ -67,14 +82,38 @@ fun ProfileScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)) {
-            Text(text = user.nickname, style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "@${user.username}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 8.dp, top = 24.dp, bottom = 24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = user.nickname.take(1),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = user.nickname, style = MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "@${user.username}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            TextButton(onClick = { showAccountSwitcher = true }) {
+                Text(text = stringResource(R.string.profile_switch_account))
+            }
         }
         HorizontalDivider()
 
@@ -211,6 +250,164 @@ fun ProfileScreen(
             },
         )
     }
+
+    if (showAccountSwitcher) {
+        AccountSwitcherDialog(
+            accounts = localAccounts,
+            currentUserId = user.id,
+            onSelect = { account ->
+                showAccountSwitcher = false
+                if (account.id != user.id) {
+                    viewModel.clearSwitchError()
+                    pendingSwitchAccount = account
+                }
+            },
+            onAddAccount = {
+                showAccountSwitcher = false
+                onAddAccount()
+            },
+            onDismiss = { showAccountSwitcher = false },
+        )
+    }
+
+    pendingSwitchAccount?.let { account ->
+        SwitchAccountPasswordDialog(
+            account = account,
+            failed = switchFailed,
+            onSubmit = { password -> viewModel.switchAccount(account.id, password) },
+            onDismiss = {
+                pendingSwitchAccount = null
+                viewModel.clearSwitchError()
+            },
+        )
+    }
+}
+
+@Composable
+private fun AccountSwitcherDialog(
+    accounts: List<LocalAccount>,
+    currentUserId: Long,
+    onSelect: (LocalAccount) -> Unit,
+    onAddAccount: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(R.string.profile_switch_account)) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                accounts.forEach { account ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { onSelect(account) }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = account.nickname.take(1),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = account.nickname,
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = "@${account.username}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (account.id == currentUserId) {
+                            Text(
+                                text = stringResource(R.string.profile_current_account),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider()
+                TextButton(onClick = onAddAccount) {
+                    Text(text = stringResource(R.string.profile_add_account))
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.action_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun SwitchAccountPasswordDialog(
+    account: LocalAccount,
+    failed: Boolean,
+    onSubmit: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var password by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(
+                    R.string.profile_switch_password_title,
+                    account.nickname,
+                ),
+            )
+        },
+        text = {
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text(text = stringResource(R.string.auth_password)) },
+                singleLine = true,
+                isError = failed,
+                visualTransformation = PasswordVisualTransformation(),
+                supportingText = if (failed) {
+                    { Text(text = stringResource(R.string.profile_switch_error)) }
+                } else {
+                    null
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { if (password.isNotEmpty()) onSubmit(password) },
+                ),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSubmit(password) },
+                enabled = password.isNotEmpty(),
+            ) {
+                Text(text = stringResource(R.string.profile_switch_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.action_cancel))
+            }
+        },
+    )
 }
 
 @Composable

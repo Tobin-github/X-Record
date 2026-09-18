@@ -16,6 +16,7 @@ import top.tobin.xrecord.core.di.IoDispatcher
 import top.tobin.xrecord.core.security.PasswordHasher
 import top.tobin.xrecord.data.local.XRecordDatabase
 import top.tobin.xrecord.data.local.dao.UserDao
+import top.tobin.xrecord.data.local.dao.LocalAccount
 import top.tobin.xrecord.data.local.entity.UserEntity
 import top.tobin.xrecord.data.preferences.SettingsDataSource
 
@@ -76,6 +77,35 @@ class AuthRepository @Inject constructor(
 
     /** 当前登录用户 id，未登录为 null。业务仓库只依赖这个值，不关心用户对象本身。 */
     val currentUserId: Flow<Long?> = settings.currentUserId
+
+    /** 本机已注册的账号列表，供切换账号使用。 */
+    fun observeLocalAccounts(): Flow<List<LocalAccount>> = userDao.observeLocalAccounts()
+
+    /**
+     * 切换到本机的另一个账号。
+     *
+     * 必须验证目标账号的密码：本地多账号的意义就在于彼此不可见，
+     * 如果切换不需要密码，隔离就形同虚设。
+     */
+    suspend fun switchAccount(userId: Long, password: String): AuthResult =
+        withContext(ioDispatcher) {
+            val user = userDao.findById(userId)
+                ?: return@withContext AuthResult.Failure(AuthError.CREDENTIALS_INVALID)
+
+            val matched = PasswordHasher.verify(
+                password = password.toCharArray(),
+                salt = user.passwordSalt,
+                iterations = user.passwordIterations,
+                expectedHash = user.passwordHash,
+            )
+            if (!matched) {
+                return@withContext AuthResult.Failure(AuthError.CREDENTIALS_INVALID)
+            }
+
+            userDao.touchLastLogin(user.id, System.currentTimeMillis())
+            settings.setCurrentUserId(user.id)
+            AuthResult.Success
+        }
 
     suspend fun register(
         username: String,

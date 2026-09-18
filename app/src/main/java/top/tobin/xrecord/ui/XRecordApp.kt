@@ -14,6 +14,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,6 +37,7 @@ import top.tobin.xrecord.R
 import top.tobin.xrecord.data.local.entity.UserEntity
 import top.tobin.xrecord.data.repository.SessionState
 import top.tobin.xrecord.ui.feature.auth.AuthNavHost
+import top.tobin.xrecord.ui.feature.auth.RegisterScreen
 import top.tobin.xrecord.ui.feature.auth.SessionViewModel
 import top.tobin.xrecord.ui.feature.bills.BillsScreen
 import top.tobin.xrecord.ui.feature.accounts.AccountsScreen
@@ -47,6 +49,7 @@ import top.tobin.xrecord.ui.feature.profile.ProfileScreen
 import top.tobin.xrecord.ui.feature.records.RecordsScreen
 import top.tobin.xrecord.ui.navigation.BillsRoute
 import top.tobin.xrecord.ui.navigation.AccountsRoute
+import top.tobin.xrecord.ui.navigation.AddAccountRoute
 import top.tobin.xrecord.ui.navigation.AppearanceRoute
 import top.tobin.xrecord.ui.navigation.CategoriesRoute
 import top.tobin.xrecord.ui.navigation.ChartsRoute
@@ -67,7 +70,9 @@ fun XRecordApp() {
     when (val state = sessionState) {
         SessionState.Loading -> LoadingScreen()
         SessionState.LoggedOut -> AuthNavHost()
-        is SessionState.LoggedIn -> MainNavHost(user = state.user)
+        // 用账号 id 作为 key：切换账号时整棵主界面树会被重建，
+        // 否则记账面板等 ViewModel 会继续持有旧账号的 userId、账户与分类
+        is SessionState.LoggedIn -> key(state.user.id) { MainNavHost(user = state.user) }
     }
 }
 
@@ -105,6 +110,7 @@ private fun MainNavHost(user: UserEntity) {
                 onOpenAccounts = { navController.navigate(AccountsRoute) },
                 onOpenCategories = { navController.navigate(CategoriesRoute) },
                 onOpenAppearance = { navController.navigate(AppearanceRoute) },
+                onAddAccount = { navController.navigate(AddAccountRoute) },
             )
         }
         composable<TransactionEditorRoute> {
@@ -119,6 +125,13 @@ private fun MainNavHost(user: UserEntity) {
         composable<AppearanceRoute> {
             AppearanceScreen(onNavigateBack = { navController.popBackStack() })
         }
+        composable<AddAccountRoute> {
+            // 复用注册页：注册成功即切到新账号，整棵主界面树会随 user 变化重建
+            RegisterScreen(
+                onNavigateBack = { navController.popBackStack() },
+                showLoginLink = false,
+            )
+        }
     }
 }
 
@@ -129,6 +142,7 @@ private fun MainScaffold(
     onOpenAccounts: () -> Unit,
     onOpenCategories: () -> Unit,
     onOpenAppearance: () -> Unit,
+    onAddAccount: () -> Unit,
 ) {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -190,6 +204,7 @@ private fun MainScaffold(
                     onOpenAccounts = onOpenAccounts,
                     onOpenCategories = onOpenCategories,
                     onOpenAppearance = onOpenAppearance,
+                    onAddAccount = onAddAccount,
                 )
             }
         }

@@ -8,6 +8,19 @@ import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import top.tobin.xrecord.data.local.entity.UserEntity
 
+/**
+ * 账号选择器需要的展示信息。
+ *
+ * 刻意不包含密码哈希与盐：它们是数据层的内部细节，没有任何理由流到界面层。
+ */
+data class LocalAccount(
+    val id: Long,
+    val username: String,
+    val nickname: String,
+    val avatarPath: String?,
+    val lastLoginAt: Long?,
+)
+
 @Dao
 interface UserDao {
     @Query("SELECT * FROM users WHERE username = :username LIMIT 1")
@@ -24,6 +37,15 @@ interface UserDao {
 
     @Query("SELECT * FROM users ORDER BY lastLoginAt DESC, id ASC")
     suspend fun findAll(): List<UserEntity>
+
+    /** 本机已注册的账号，最近登录的排在前面。 */
+    @Query(
+        """
+        SELECT id, username, nickname, avatarPath, lastLoginAt FROM users
+        ORDER BY lastLoginAt DESC, id ASC
+        """,
+    )
+    fun observeLocalAccounts(): Flow<List<LocalAccount>>
 
     @Insert
     suspend fun insert(user: UserEntity): Long

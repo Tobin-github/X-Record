@@ -23,6 +23,9 @@ data object CategoriesRoute
 data object AppearanceRoute
 
 @Serializable
+data object AddAccountRoute
+
+@Serializable
 data object ChartsRoute
 
 @Serializable

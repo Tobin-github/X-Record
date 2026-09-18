@@ -26,7 +26,7 @@ fun AuthNavHost(modifier: Modifier = Modifier) {
             )
         }
         composable<RegisterRoute> {
-            RegisterScreen(onNavigateToLogin = { navController.popBackStack() })
+            RegisterScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }
