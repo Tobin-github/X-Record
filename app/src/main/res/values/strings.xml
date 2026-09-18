@@ -84,6 +84,37 @@
     <string name="profile_recurring">定期账单</string>
     <string name="profile_backup">数据备份</string>
 
+    <string name="profile_security">安全</string>
+    <string name="security_title">安全</string>
+    <string name="security_app_lock">应用锁</string>
+    <string name="security_app_lock_hint">打开应用时需要输入 4 位密码</string>
+    <string name="security_change_pin">修改密码</string>
+    <string name="security_biometric">生物识别解锁</string>
+    <string name="security_biometric_hint">用指纹或人脸代替输入密码</string>
+    <string name="security_auto_lock">自动锁定</string>
+    <string name="security_lock_now">立即锁定</string>
+    <string name="security_timeout_now">立即</string>
+    <string name="security_timeout_30s">30 秒后</string>
+    <string name="security_timeout_1m">1 分钟后</string>
+    <string name="security_timeout_5m">5 分钟后</string>
+    <string name="security_timeout_never">从不</string>
+    <string name="security_pin_set_title">设置应用锁密码</string>
+    <string name="security_pin_change_title">修改密码</string>
+    <string name="security_pin_new">新密码（4 位数字）</string>
+    <string name="security_pin_confirm">确认密码</string>
+    <string name="security_pin_error_length">请输入 4 位数字</string>
+    <string name="security_pin_error_mismatch">两次输入的密码不一致</string>
+    <string name="security_note">应用锁的密码独立于登录密码，只保存在本机。忘记后无法找回，只能清除应用数据重新开始。</string>
+
+    <string name="lock_title">已锁定</string>
+    <string name="lock_subtitle">输入密码以继续</string>
+    <string name="lock_error">密码错误，请重试</string>
+    <string name="lock_use_biometric">使用生物识别</string>
+    <string name="lock_biometric_title">解锁 X-Record</string>
+    <string name="lock_biometric_subtitle">使用指纹或人脸继续</string>
+    <string name="lock_forgot">忘记密码？</string>
+    <string name="lock_forgot_message">应用锁的密码只保存在本机，且没有可用于验证身份的服务端，因此无法找回。\n\n如果确实忘记，只能在系统设置里清除本应用的数据，这会连同所有记账记录一起删除。</string>
+
     <string name="auth_tagline">数据全部保存在本机，不联网、不上传</string>
 
     <string name="auth_login_title">登录</string>

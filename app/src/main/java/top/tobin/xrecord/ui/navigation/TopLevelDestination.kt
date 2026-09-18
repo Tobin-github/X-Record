@@ -32,6 +32,9 @@ data object BackupRoute
 data object RecurringRulesRoute
 
 @Serializable
+data object SecurityRoute
+
+@Serializable
 data object ChartsRoute
 
 @Serializable

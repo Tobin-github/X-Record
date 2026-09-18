@@ -57,6 +57,7 @@ fun ProfileScreen(
     onAddAccount: () -> Unit,
     onOpenRecurring: () -> Unit,
     onOpenBackup: () -> Unit,
+    onOpenSecurity: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
@@ -149,6 +150,10 @@ fun ProfileScreen(
         SettingRow(
             title = stringResource(R.string.profile_backup),
             onClick = onOpenBackup,
+        )
+        SettingRow(
+            title = stringResource(R.string.profile_security),
+            onClick = onOpenSecurity,
         )
         SettingRow(
             title = stringResource(R.string.profile_clear_data),

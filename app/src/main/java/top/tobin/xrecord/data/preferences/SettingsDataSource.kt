@@ -15,6 +15,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import top.tobin.xrecord.core.util.PeriodCalculator
+import top.tobin.xrecord.core.security.PasswordHasher
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "x_record_settings",
@@ -37,6 +38,12 @@ class SettingsDataSource @Inject constructor(
         val PERIOD_START_DAY = intPreferencesKey("period_start_day")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
+        val APP_LOCK_ENABLED = booleanPreferencesKey("app_lock_enabled")
+        val APP_LOCK_PIN_HASH = stringPreferencesKey("app_lock_pin_hash")
+        val APP_LOCK_PIN_SALT = stringPreferencesKey("app_lock_pin_salt")
+        val APP_LOCK_PIN_ITERATIONS = intPreferencesKey("app_lock_pin_iterations")
+        val APP_LOCK_BIOMETRIC = booleanPreferencesKey("app_lock_biometric")
+        val APP_LOCK_TIMEOUT_SECONDS = intPreferencesKey("app_lock_timeout_seconds")
     }
 
     /** 当前登录用户 id，null 表示未登录。 */
@@ -103,10 +110,67 @@ class SettingsDataSource @Inject constructor(
             preferences[Keys.DYNAMIC_COLOR] = enabled
         }
     }
+
+    /**
+     * 应用锁配置。
+     *
+     * 这些值是**设备级**的，与登录账号无关：锁保护的是"这台手机上的这个应用"，
+     * 而不是某一个账号。
+     */
+    val appLockConfig: Flow<AppLockConfig> = context.settingsDataStore.data
+        .map { preferences ->
+            AppLockConfig(
+                enabled = preferences[Keys.APP_LOCK_ENABLED] ?: false,
+                pinHash = preferences[Keys.APP_LOCK_PIN_HASH],
+                pinSalt = preferences[Keys.APP_LOCK_PIN_SALT],
+                pinIterations = preferences[Keys.APP_LOCK_PIN_ITERATIONS]
+                    ?: PasswordHasher.DEFAULT_ITERATIONS,
+                biometricEnabled = preferences[Keys.APP_LOCK_BIOMETRIC] ?: false,
+                timeoutSeconds = preferences[Keys.APP_LOCK_TIMEOUT_SECONDS]
+                    ?: DEFAULT_LOCK_TIMEOUT_SECONDS,
+            )
+        }
+
+    suspend fun setAppLockEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.APP_LOCK_ENABLED] = enabled }
+    }
+
+    suspend fun setAppLockPin(hash: String, salt: String, iterations: Int) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[Keys.APP_LOCK_PIN_HASH] = hash
+            preferences[Keys.APP_LOCK_PIN_SALT] = salt
+            preferences[Keys.APP_LOCK_PIN_ITERATIONS] = iterations
+        }
+    }
+
+    suspend fun setAppLockBiometric(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.APP_LOCK_BIOMETRIC] = enabled }
+    }
+
+    suspend fun setAppLockTimeoutSeconds(seconds: Int) {
+        context.settingsDataStore.edit { it[Keys.APP_LOCK_TIMEOUT_SECONDS] = seconds }
+    }
+
+    companion object {
+        /** 默认退到后台 30 秒后需要重新解锁。 */
+        const val DEFAULT_LOCK_TIMEOUT_SECONDS = 30
+    }
 }
 
 enum class ThemeMode {
     FOLLOW_SYSTEM,
     LIGHT,
     DARK,
+}
+
+/** 应用锁配置。[pinHash] 为空表示还没设置过密码。 */
+data class AppLockConfig(
+    val enabled: Boolean = false,
+    val pinHash: String? = null,
+    val pinSalt: String? = null,
+    val pinIterations: Int = PasswordHasher.DEFAULT_ITERATIONS,
+    val biometricEnabled: Boolean = false,
+    val timeoutSeconds: Int = SettingsDataSource.DEFAULT_LOCK_TIMEOUT_SECONDS,
+) {
+    val hasPin: Boolean get() = !pinHash.isNullOrEmpty() && !pinSalt.isNullOrEmpty()
 }

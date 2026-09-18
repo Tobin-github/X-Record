@@ -13,6 +13,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -21,10 +22,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -34,6 +39,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import top.tobin.xrecord.R
+import top.tobin.xrecord.core.security.AppLockState
 import top.tobin.xrecord.data.local.entity.UserEntity
 import top.tobin.xrecord.data.repository.SessionState
 import top.tobin.xrecord.ui.feature.auth.AuthNavHost
@@ -48,6 +54,9 @@ import top.tobin.xrecord.ui.feature.editor.QuickEntrySheet
 import top.tobin.xrecord.ui.feature.editor.TransactionEditorScreen
 import top.tobin.xrecord.ui.feature.profile.ProfileScreen
 import top.tobin.xrecord.ui.feature.records.RecordsScreen
+import top.tobin.xrecord.ui.feature.lock.AppLockViewModel
+import top.tobin.xrecord.ui.feature.lock.LockScreen
+import top.tobin.xrecord.ui.feature.lock.SecurityScreen
 import top.tobin.xrecord.ui.feature.recurring.RecurringRulesScreen
 import top.tobin.xrecord.ui.navigation.BillsRoute
 import top.tobin.xrecord.ui.navigation.AccountsRoute
@@ -60,12 +69,62 @@ import top.tobin.xrecord.ui.navigation.MainRoute
 import top.tobin.xrecord.ui.navigation.ProfileRoute
 import top.tobin.xrecord.ui.navigation.RecordsRoute
 import top.tobin.xrecord.ui.navigation.RecurringRulesRoute
+import top.tobin.xrecord.ui.navigation.SecurityRoute
 import top.tobin.xrecord.ui.navigation.TopLevelDestination
 import top.tobin.xrecord.ui.navigation.TransactionEditorRoute
+import top.tobin.xrecord.ui.components.findActivity
+import android.view.WindowManager
 import top.tobin.xrecord.ui.feature.settings.AppearanceScreen
 
 @Composable
 fun XRecordApp() {
+    val lockViewModel: AppLockViewModel = hiltViewModel()
+    val lockState by lockViewModel.state.collectAsStateWithLifecycle()
+    val lockConfig by lockViewModel.config.collectAsStateWithLifecycle()
+
+    // 退到后台记录时间，回到前台判断是否要重新上锁
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP ->
+                    lockViewModel.onBackgrounded(System.currentTimeMillis())
+
+                Lifecycle.Event.ON_START ->
+                    lockViewModel.onForegrounded(System.currentTimeMillis())
+
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // 开启应用锁后禁止截屏与最近任务的缩略图，避免解锁界面之外泄露内容
+    val activity = LocalContext.current.findActivity()
+    DisposableEffect(lockConfig.enabled) {
+        activity?.window?.let { window ->
+            if (lockConfig.enabled) {
+                window.setFlags(
+                    WindowManager.LayoutParams.FLAG_SECURE,
+                    WindowManager.LayoutParams.FLAG_SECURE,
+                )
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
+        }
+        onDispose { }
+    }
+
+    when (lockState) {
+        AppLockState.Unknown -> LoadingScreen()
+        AppLockState.Locked -> LockScreen(viewModel = lockViewModel)
+        AppLockState.Unlocked -> SessionGate()
+    }
+}
+
+@Composable
+private fun SessionGate() {
     val sessionViewModel: SessionViewModel = hiltViewModel()
     val sessionState by sessionViewModel.sessionState.collectAsStateWithLifecycle()
 
@@ -117,6 +176,7 @@ private fun MainNavHost(user: UserEntity) {
                 onAddAccount = { navController.navigate(AddAccountRoute) },
                 onOpenRecurring = { navController.navigate(RecurringRulesRoute) },
                 onOpenBackup = { navController.navigate(BackupRoute) },
+                onOpenSecurity = { navController.navigate(SecurityRoute) },
             )
         }
         composable<TransactionEditorRoute> {
@@ -144,6 +204,9 @@ private fun MainNavHost(user: UserEntity) {
         composable<BackupRoute> {
             BackupScreen(onNavigateBack = { navController.popBackStack() })
         }
+        composable<SecurityRoute> {
+            SecurityScreen(onNavigateBack = { navController.popBackStack() })
+        }
     }
 }
 
@@ -157,6 +220,7 @@ private fun MainScaffold(
     onAddAccount: () -> Unit,
     onOpenRecurring: () -> Unit,
     onOpenBackup: () -> Unit,
+    onOpenSecurity: () -> Unit,
 ) {
     val navController = rememberNavController()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -221,6 +285,7 @@ private fun MainScaffold(
                     onAddAccount = onAddAccount,
                     onOpenRecurring = onOpenRecurring,
                     onOpenBackup = onOpenBackup,
+                    onOpenSecurity = onOpenSecurity,
                 )
             }
         }
