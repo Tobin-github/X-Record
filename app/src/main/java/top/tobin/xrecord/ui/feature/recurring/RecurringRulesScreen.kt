@@ -17,8 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,7 +33,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,7 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import top.tobin.xrecord.R
 import top.tobin.xrecord.core.money.MoneyFormatter
 import top.tobin.xrecord.core.util.DateTimeUtils
-import top.tobin.xrecord.core.util.DatePickerBridge
+import top.tobin.xrecord.ui.components.WheelDatePickerDialog
 import top.tobin.xrecord.data.local.dao.AccountWithBalance
 import top.tobin.xrecord.data.local.entity.CategoryEntity
 import top.tobin.xrecord.data.local.entity.RecurringFrequency
@@ -522,36 +519,14 @@ private fun RuleEditorDialog(
     )
 
     if (showDatePicker) {
-        val pickerState = rememberDatePickerState(
-            initialSelectedDateMillis = DatePickerBridge.toPickerMillis(
-                DateTimeUtils.toLocalDate(nextTriggerAt),
-            ),
+        WheelDatePickerDialog(
+            initialDate = DateTimeUtils.toLocalDate(nextTriggerAt),
+            onDismiss = { showDatePicker = false },
+            onConfirm = { date ->
+                nextTriggerAt = DateTimeUtils.withDate(nextTriggerAt, date)
+                showDatePicker = false
+            },
         )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        pickerState.selectedDateMillis?.let { millis ->
-                            nextTriggerAt = DateTimeUtils.withDate(
-                                nextTriggerAt,
-                                DatePickerBridge.fromPickerMillis(millis),
-                            )
-                        }
-                        showDatePicker = false
-                    },
-                ) {
-                    Text(text = stringResource(R.string.action_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(text = stringResource(R.string.action_cancel))
-                }
-            },
-        ) {
-            DatePicker(state = pickerState)
-        }
     }
 }
 

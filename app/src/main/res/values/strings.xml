@@ -116,6 +116,11 @@
     <string name="lock_forgot">忘记密码？</string>
     <string name="lock_forgot_message">应用锁的密码只保存在本机，且没有可用于验证身份的服务端，因此无法找回。\n\n如果确实忘记，只能在系统设置里清除本应用的数据，这会连同所有记账记录一起删除。</string>
 
+    <string name="date_picker_title">选择日期</string>
+    <string name="date_picker_year">%1$d年</string>
+    <string name="date_picker_month">%1$d月</string>
+    <string name="date_picker_day">%1$d日</string>
+
     <string name="auth_tagline">数据全部保存在本机，不联网、不上传</string>
 
     <string name="auth_login_title">登录</string>

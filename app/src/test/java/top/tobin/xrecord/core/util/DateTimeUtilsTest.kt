@@ -62,13 +62,4 @@ class DateTimeUtilsTest {
         assertEquals("2025年12月5日 - 1月4日", DateTimeUtils.periodLabel(period, startDay = 5))
     }
 
-    @Test
-    fun `日期选择器换算不跨时区偏移`() {
-        val date = LocalDate.of(2026, 9, 18)
-
-        val millis = DatePickerBridge.toPickerMillis(date)
-
-        assertEquals(date, DatePickerBridge.fromPickerMillis(millis))
-    }
-
 }
