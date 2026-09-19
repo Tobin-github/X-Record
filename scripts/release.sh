@@ -75,7 +75,7 @@ NEXT_CODE=$((CURRENT_CODE + 1))
 
 # versionCode 必须递增，否则已安装旧版的用户无法覆盖升级，
 # 只能卸载重装——而卸载会清空全部记账数据。
-echo "==> versionCode $CURRENT_CODE -> $NEXT_CODE，versionName -> $VERSION"
+echo "==> versionCode $CURRENT_CODE -> ${NEXT_CODE}，versionName -> $VERSION"
 
 cp "$GRADLE_FILE" "$GRADLE_FILE.release-backup"
 sed -i.bak -E "s/versionCode = [0-9]+/versionCode = $NEXT_CODE/" "$GRADLE_FILE"
@@ -112,7 +112,7 @@ cp "$APK_PATH" "$ARCHIVE_DIR/$APK_NAME"
 [[ -f "$MAPPING_PATH" ]] && cp "$MAPPING_PATH" "$ARCHIVE_DIR/mapping.txt"
 
 echo "==> 已归档到 $ARCHIVE_DIR"
-echo "    $APK_NAME（$(du -h "$ARCHIVE_DIR/$APK_NAME" | cut -f1)）"
+echo "    ${APK_NAME}（$(du -h "$ARCHIVE_DIR/$APK_NAME" | cut -f1)）"
 echo "    mapping.txt（用于还原混淆后的崩溃堆栈，请勿公开）"
 
 if $DRY_RUN; then
