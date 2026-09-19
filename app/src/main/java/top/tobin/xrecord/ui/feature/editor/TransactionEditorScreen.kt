@@ -1,8 +1,6 @@
 package top.tobin.xrecord.ui.feature.editor
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,8 +58,9 @@ fun TransactionEditorScreen(
             onRemarkChange = viewModel::onRemarkChange,
             onSave = viewModel::save,
             modifier = Modifier
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState()),
+                // 不再整体加 verticalScroll：表单内部已分好可滚动与固定区，
+                // 两层滚动会让手指落在哪一层变得不可预期
+                .padding(innerPadding),
         )
     }
 }

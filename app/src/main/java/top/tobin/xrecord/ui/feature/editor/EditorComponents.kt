@@ -89,7 +89,7 @@ internal fun AmountKeypad(
                 }
             }
         }
-        Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().height(60.dp)) {
             KeypadKey(
                 label = "=",
                 modifier = Modifier
