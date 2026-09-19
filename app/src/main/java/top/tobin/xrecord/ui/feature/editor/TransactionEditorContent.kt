@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -28,12 +26,14 @@ import top.tobin.xrecord.ui.theme.amountColor
  *
  * 新增时放在底部弹层里，编辑时放在全屏页面里，两侧只提供外壳，表单本身只有这一份。
  *
- * 布局分两段：上半部分是表单（可滚动，分类宫格在其中保持固定高度、自己滚动），
- * 下半部分是数字键盘与保存按钮（**固定在底部，不参与滚动**）。
+ * 布局约定：**只有分类宫格会滚动，其余元素一律固定**。
  *
- * 键盘之所以必须固定：`Modifier.height` 会服从父级给的上限，表单内容一旦超过
- * 可用高度，底部按键行就会被压缩——用户看到的"保存按钮变得很扁"就是这么来的，
- * 在字体或显示大小调大的机型上尤其明显。固定之后它永远拿到完整高度。
+ * 分类宫格用 `weight(1f)` 吸收剩余高度：屏幕高时多显示几行，屏幕矮时自动收窄，
+ * 因此类型、金额、账户、备注与键盘都不会被挤走或压缩。
+ *
+ * 键盘与保存按钮尤其不能参与滚动或压缩：`Modifier.height` 会服从父级给的上限，
+ * 一旦内容超过可用高度，底部按键行就会被压扁——用户看到的"保存按钮变得很小"
+ * 就是这么来的，在字体或显示大小调大的机型上尤其明显。
  */
 @Composable
 internal fun TransactionEditorContent(
@@ -51,102 +51,90 @@ internal fun TransactionEditorContent(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                // fill = false：空间够时按内容高度收着，不够时压缩本区域并允许滚动，
-                // 而不是去挤下面的键盘
-                .weight(1f, fill = false)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                TransactionType.entries.forEach { type ->
-                    FilterChip(
-                        selected = type == state.type,
-                        onClick = { onTypeChange(type) },
-                        label = { Text(text = type.label()) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DateSelector(occurredAt = state.occurredAt, onChange = onDateChange)
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = state.expression,
-                    style = MaterialTheme.typography.displaySmall,
-                    color = state.type.amountColor(),
-                    maxLines = 1,
+            TransactionType.entries.forEach { type ->
+                FilterChip(
+                    selected = type == state.type,
+                    onClick = { onTypeChange(type) },
+                    label = { Text(text = type.label()) },
+                    modifier = Modifier.weight(1f),
                 )
             }
+        }
 
-            when (state.type) {
-                TransactionType.TRANSFER -> {
-                    AccountSelector(
-                        label = stringResource(R.string.editor_account_from),
-                        selected = state.selectedAccount,
-                        accounts = state.selectableAccounts,
-                        onSelect = onAccountSelect,
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
-                    AccountSelector(
-                        label = stringResource(R.string.editor_account_to),
-                        selected = state.selectedToAccount,
-                        accounts = state.selectableAccounts,
-                        onSelect = onToAccountSelect,
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
-                    Spacer(modifier = Modifier.height(120.dp))
-                }
-
-                else -> {
-                    CategoryGrid(
-                        categories = state.categories,
-                        selectedId = state.categoryId,
-                        onSelect = onCategorySelect,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(190.dp),
-                    )
-                    AccountSelector(
-                        label = stringResource(R.string.editor_account),
-                        selected = state.selectedAccount,
-                        accounts = state.selectableAccounts,
-                        onSelect = onAccountSelect,
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
-                }
-            }
-
-            OutlinedTextField(
-                value = state.remark,
-                onValueChange = onRemarkChange,
-                placeholder = { Text(text = stringResource(R.string.editor_remark_hint)) },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DateSelector(occurredAt = state.occurredAt, onChange = onDateChange)
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = state.expression,
+                style = MaterialTheme.typography.displaySmall,
+                color = state.type.amountColor(),
+                maxLines = 1,
             )
+        }
 
-            if (state.error != null) {
-                Text(
-                    text = state.error.message(),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-                )
-            }
+        if (state.type == TransactionType.TRANSFER) {
+            AccountSelector(
+                label = stringResource(R.string.editor_account_from),
+                selected = state.selectedAccount,
+                accounts = state.selectableAccounts,
+                onSelect = onAccountSelect,
+                modifier = Modifier.padding(horizontal = 12.dp),
+            )
+            AccountSelector(
+                label = stringResource(R.string.editor_account_to),
+                selected = state.selectedToAccount,
+                accounts = state.selectableAccounts,
+                onSelect = onToAccountSelect,
+                modifier = Modifier.padding(horizontal = 12.dp),
+            )
+            // 转账没有分类宫格，用空白吸收剩余高度，保持下方元素位置稳定
+            Spacer(modifier = Modifier.weight(1f))
+        } else {
+            CategoryGrid(
+                categories = state.categories,
+                selectedId = state.categoryId,
+                onSelect = onCategorySelect,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            )
+            AccountSelector(
+                label = stringResource(R.string.editor_account),
+                selected = state.selectedAccount,
+                accounts = state.selectableAccounts,
+                onSelect = onAccountSelect,
+                modifier = Modifier.padding(horizontal = 12.dp),
+            )
+        }
+
+        OutlinedTextField(
+            value = state.remark,
+            onValueChange = onRemarkChange,
+            placeholder = { Text(text = stringResource(R.string.editor_remark_hint)) },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+
+        if (state.error != null) {
+            Text(
+                text = state.error.message(),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+            )
         }
 
         Spacer(modifier = Modifier.height(4.dp))

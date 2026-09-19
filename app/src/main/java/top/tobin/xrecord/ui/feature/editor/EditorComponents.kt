@@ -75,7 +75,7 @@ internal fun AmountKeypad(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         KEYPAD_ROWS.forEach { row ->
-            Row(modifier = Modifier.fillMaxWidth().height(52.dp)) {
+            Row(modifier = Modifier.fillMaxWidth().height(48.dp)) {
                 row.forEach { key ->
                     KeypadKey(
                         label = key,
