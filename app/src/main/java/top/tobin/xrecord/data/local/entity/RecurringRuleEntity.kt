@@ -7,9 +7,13 @@ import androidx.room.PrimaryKey
 import androidx.room.ColumnInfo
 
 /**
- * 定期账单规则，由 WorkManager 按 [nextTriggerAt] 触发。
+ * 定期账单规则。
  *
- * [autoCreate] 为 true 时自动生成流水，为 false 时只发提醒交给用户确认。
+ * 到期判定依据 [nextTriggerAt]：应用每次启动与进入定期账单页时会补齐错过的期数
+ * （见 `RecurringRuleRepository.generateDue`），不使用后台调度——本地应用不在后台
+ * 运行时生成流水没有意义，也避免在用户不知情的情况下写入数据。
+ *
+ * [autoCreate] 为 true 时自动生成流水，为 false 时只保存规则交给用户手动记账。
  */
 @Entity(
     tableName = "recurring_rules",
