@@ -55,21 +55,9 @@ fun LockScreen(viewModel: AppLockViewModel = hiltViewModel()) {
     val activity = context.findActivity() as? FragmentActivity
     val biometricEnabled = config.biometricEnabled && viewModel.biometricAvailable
 
-    fun tryBiometric() {
-        if (activity == null) return
-        BiometricPromptLauncher.authenticate(
-            activity = activity,
-            title = context.getString(R.string.lock_biometric_title),
-            subtitle = context.getString(R.string.lock_biometric_subtitle),
-            negativeButtonText = context.getString(R.string.action_cancel),
-            onSuccess = { viewModel.unlock() },
-            onFailure = { /* 用户取消或识别失败时留在密码界面 */ },
-        )
-    }
-
     // 开启生物识别后自动弹一次，用户取消也不强制
     LaunchedEffect(biometricEnabled) {
-        if (biometricEnabled) tryBiometric()
+        if (biometricEnabled) launchBiometric(activity, context) { viewModel.unlock() }
     }
 
     Column(
@@ -124,7 +112,9 @@ fun LockScreen(viewModel: AppLockViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
         if (biometricEnabled) {
-            TextButton(onClick = { tryBiometric() }) {
+            TextButton(
+                onClick = { launchBiometric(activity, context) { viewModel.unlock() } },
+            ) {
                 Text(text = stringResource(R.string.lock_use_biometric))
             }
         }
@@ -145,6 +135,30 @@ fun LockScreen(viewModel: AppLockViewModel = hiltViewModel()) {
             },
         )
     }
+}
+
+/**
+ * 拉起系统生物识别。
+ *
+ * 放在 composable 之外：既避免在 composable 里定义局部函数，
+ * 也避免对捕获变量做智能转换——两者在不同版本的 Kotlin 分析器里
+ * 表现不一致，容易出现"IDE 报红、Gradle 编译通过"的分歧。
+ */
+private fun launchBiometric(
+    activity: FragmentActivity?,
+    context: android.content.Context,
+    onSuccess: () -> Unit,
+) {
+    val host = activity ?: return
+    BiometricPromptLauncher.authenticate(
+        activity = host,
+        title = context.getString(R.string.lock_biometric_title),
+        subtitle = context.getString(R.string.lock_biometric_subtitle),
+        negativeButtonText = context.getString(R.string.action_cancel),
+        onSuccess = onSuccess,
+        // 用户取消或识别失败时留在密码界面，不额外提示
+        onFailure = { },
+    )
 }
 
 @Composable
