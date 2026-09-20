@@ -30,7 +30,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import top.tobin.xrecord.R
+import top.tobin.xrecord.data.repository.AuthError
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
 @Composable
 fun RegisterScreen(
@@ -42,6 +45,32 @@ fun RegisterScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    RegisterContent(
+        uiState = uiState,
+        showLoginLink = showLoginLink,
+        onUsernameChange = viewModel::onUsernameChange,
+        onNicknameChange = viewModel::onNicknameChange,
+        onPasswordChange = viewModel::onPasswordChange,
+        onConfirmPasswordChange = viewModel::onConfirmPasswordChange,
+        onSubmit = viewModel::submit,
+        onNavigateBack = onNavigateBack,
+        modifier = modifier,
+    )
+}
+
+/** 注册页的无状态内容，便于在预览器中渲染。 */
+@Composable
+internal fun RegisterContent(
+    uiState: RegisterUiState,
+    showLoginLink: Boolean,
+    onUsernameChange: (String) -> Unit,
+    onNicknameChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onConfirmPasswordChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -68,7 +97,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(24.dp))
         OutlinedTextField(
             value = uiState.username,
-            onValueChange = viewModel::onUsernameChange,
+            onValueChange = onUsernameChange,
             label = { Text(text = stringResource(R.string.auth_username)) },
             supportingText = { Text(text = stringResource(R.string.auth_username_hint)) },
             singleLine = true,
@@ -80,7 +109,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = uiState.nickname,
-            onValueChange = viewModel::onNicknameChange,
+            onValueChange = onNicknameChange,
             label = { Text(text = stringResource(R.string.auth_nickname)) },
             supportingText = { Text(text = stringResource(R.string.auth_nickname_hint)) },
             singleLine = true,
@@ -92,7 +121,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = uiState.password,
-            onValueChange = viewModel::onPasswordChange,
+            onValueChange = onPasswordChange,
             label = { Text(text = stringResource(R.string.auth_password)) },
             singleLine = true,
             enabled = !uiState.isSubmitting,
@@ -107,7 +136,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = uiState.confirmPassword,
-            onValueChange = viewModel::onConfirmPasswordChange,
+            onValueChange = onConfirmPasswordChange,
             label = { Text(text = stringResource(R.string.auth_confirm_password)) },
             singleLine = true,
             enabled = !uiState.isSubmitting,
@@ -116,7 +145,7 @@ fun RegisterScreen(
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Done,
             ),
-            keyboardActions = KeyboardActions(onDone = { viewModel.submit() }),
+            keyboardActions = KeyboardActions(onDone = { onSubmit() }),
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -127,7 +156,7 @@ fun RegisterScreen(
             text = stringResource(R.string.auth_register_action),
             isSubmitting = uiState.isSubmitting,
             enabled = uiState.canSubmit,
-            onClick = viewModel::submit,
+            onClick = onSubmit,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -142,5 +171,45 @@ fun RegisterScreen(
         }
 
         Spacer(modifier = Modifier.height(48.dp))
+    }
+}
+
+@Preview(name = "注册 · 默认", showBackground = true)
+@Composable
+private fun RegisterContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        RegisterContent(
+            uiState = RegisterUiState(),
+            showLoginLink = true,
+            onUsernameChange = {},
+            onNicknameChange = {},
+            onPasswordChange = {},
+            onConfirmPasswordChange = {},
+            onSubmit = {},
+            onNavigateBack = {},
+        )
+    }
+}
+
+@Preview(name = "注册 · 密码不一致", showBackground = true)
+@Composable
+private fun RegisterContentErrorPreview() {
+    XRecordTheme(dynamicColor = false) {
+        RegisterContent(
+            uiState = RegisterUiState(
+                username = "tobin",
+                nickname = "Tobin",
+                password = "abc123",
+                confirmPassword = "abc124",
+                error = AuthError.PASSWORD_MISMATCH,
+            ),
+            showLoginLink = false,
+            onUsernameChange = {},
+            onNicknameChange = {},
+            onPasswordChange = {},
+            onConfirmPasswordChange = {},
+            onSubmit = {},
+            onNavigateBack = {},
+        )
     }
 }

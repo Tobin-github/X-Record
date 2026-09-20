@@ -51,9 +51,13 @@ import kotlin.math.roundToInt
 import top.tobin.xrecord.R
 import top.tobin.xrecord.core.money.MoneyFormatter
 import top.tobin.xrecord.data.local.entity.BookEntity
+import top.tobin.xrecord.data.local.entity.BudgetEntity
 import top.tobin.xrecord.data.local.entity.CategoryEntity
 import top.tobin.xrecord.data.local.entity.TransactionType
 import top.tobin.xrecord.ui.components.AmountSummaryRow
+import androidx.compose.ui.tooling.preview.Preview
+import top.tobin.xrecord.ui.preview.PreviewData
+import top.tobin.xrecord.ui.theme.XRecordTheme
 import top.tobin.xrecord.ui.theme.amountColor
 import top.tobin.xrecord.ui.theme.parseHexColor
 
@@ -64,6 +68,53 @@ fun BillsScreen(
     viewModel: BillsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    BillsContent(
+        state = state,
+        actions = BillsActions(
+            onPreviousPeriod = viewModel::showPreviousPeriod,
+            onNextPeriod = viewModel::showNextPeriod,
+            onSelectBook = viewModel::selectBook,
+            onCreateBook = viewModel::createBook,
+            onRenameBook = viewModel::renameBook,
+            onSetDefaultBook = viewModel::setDefaultBook,
+            onRequestDeleteBook = viewModel::requestDeleteBook,
+            onConfirmDeleteBook = viewModel::confirmDeleteBook,
+            onCancelDeleteBook = viewModel::cancelDeleteBook,
+            onSetTotalBudget = viewModel::setTotalBudget,
+            onSetCategoryBudget = viewModel::setCategoryBudget,
+            onRemoveBudget = viewModel::removeBudget,
+            onMessageShown = viewModel::consumeMessage,
+        ),
+        snackbarHostState = snackbarHostState,
+        modifier = modifier,
+    )
+}
+
+/** 账单页的操作。 */
+internal class BillsActions(
+    val onPreviousPeriod: () -> Unit = {},
+    val onNextPeriod: () -> Unit = {},
+    val onSelectBook: (Long) -> Unit = {},
+    val onCreateBook: (String) -> Unit = {},
+    val onRenameBook: (Long, String) -> Unit = { _, _ -> },
+    val onSetDefaultBook: (Long) -> Unit = {},
+    val onRequestDeleteBook: (BookEntity) -> Unit = {},
+    val onConfirmDeleteBook: () -> Unit = {},
+    val onCancelDeleteBook: () -> Unit = {},
+    val onSetTotalBudget: (Long) -> Unit = {},
+    val onSetCategoryBudget: (Long, Long) -> Unit = { _, _ -> },
+    val onRemoveBudget: (BudgetEntity) -> Unit = {},
+    val onMessageShown: () -> Unit = {},
+)
+
+@Composable
+internal fun BillsContent(
+    state: BillsUiState,
+    actions: BillsActions,
+    snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
+) {
     var bookDialog by remember { mutableStateOf<BookDialogState?>(null) }
     var budgetTarget by remember { mutableStateOf<BudgetTarget?>(null) }
 
@@ -78,7 +129,7 @@ fun BillsScreen(
     LaunchedEffect(messageText) {
         if (messageText != null) {
             snackbarHostState.showSnackbar(messageText)
-            viewModel.consumeMessage()
+            actions.onMessageShown()
         }
     }
 
@@ -89,8 +140,8 @@ fun BillsScreen(
     ) {
         PeriodHeader(
             label = state.periodLabel,
-            onPrevious = viewModel::showPreviousPeriod,
-            onNext = viewModel::showNextPeriod,
+            onPrevious = actions.onPreviousPeriod,
+            onNext = actions.onNextPeriod,
         )
         AmountSummaryRow(
             incomeLabel = stringResource(R.string.records_income),
@@ -109,10 +160,10 @@ fun BillsScreen(
                 BookRow(
                     book = book,
                     selected = book.id == state.currentBookId,
-                    onSelect = { viewModel.selectBook(book.id) },
+                    onSelect = { actions.onSelectBook(book.id) },
                     onRename = { bookDialog = BookDialogState.Rename(book) },
-                    onSetDefault = { viewModel.setDefaultBook(book.id) },
-                    onDelete = { viewModel.requestDeleteBook(book) },
+                    onSetDefault = { actions.onSetDefaultBook(book.id) },
+                    onDelete = { actions.onRequestDeleteBook(book) },
                 )
             }
             TextButton(onClick = { bookDialog = BookDialogState.Create }) {
@@ -136,7 +187,7 @@ fun BillsScreen(
                     title = stringResource(R.string.bills_total_budget),
                     progress = totalBudget,
                     onEdit = { budgetTarget = BudgetTarget.Total },
-                    onRemove = { viewModel.removeBudget(totalBudget.budget) },
+                    onRemove = { actions.onRemoveBudget(totalBudget.budget) },
                 )
             }
 
@@ -151,7 +202,7 @@ fun BillsScreen(
                             currentAmount = progress.budget.amount,
                         )
                     },
-                    onRemove = { viewModel.removeBudget(progress.budget) },
+                    onRemove = { actions.onRemoveBudget(progress.budget) },
                 )
             }
 
@@ -173,8 +224,8 @@ fun BillsScreen(
             onDismiss = { bookDialog = null },
             onConfirm = { name ->
                 when (dialog) {
-                    is BookDialogState.Create -> viewModel.createBook(name)
-                    is BookDialogState.Rename -> viewModel.renameBook(dialog.book.id, name)
+                    is BookDialogState.Create -> actions.onCreateBook(name)
+                    is BookDialogState.Rename -> actions.onRenameBook(dialog.book.id, name)
                 }
                 bookDialog = null
             },
@@ -188,8 +239,8 @@ fun BillsScreen(
             onDismiss = { budgetTarget = null },
             onConfirm = { categoryId, amount ->
                 when (categoryId) {
-                    null -> viewModel.setTotalBudget(amount)
-                    else -> viewModel.setCategoryBudget(categoryId, amount)
+                    null -> actions.onSetTotalBudget(amount)
+                    else -> actions.onSetCategoryBudget(categoryId, amount)
                 }
                 budgetTarget = null
             },
@@ -198,7 +249,7 @@ fun BillsScreen(
 
     state.pendingDeleteBook?.let {
         AlertDialog(
-            onDismissRequest = viewModel::cancelDeleteBook,
+            onDismissRequest = actions.onCancelDeleteBook,
             title = { Text(text = stringResource(R.string.bills_delete_book)) },
             text = {
                 Text(
@@ -213,12 +264,12 @@ fun BillsScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = viewModel::confirmDeleteBook) {
+                TextButton(onClick = actions.onConfirmDeleteBook) {
                     Text(text = stringResource(R.string.action_confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::cancelDeleteBook) {
+                TextButton(onClick = actions.onCancelDeleteBook) {
                     Text(text = stringResource(R.string.action_cancel))
                 }
             },
@@ -504,6 +555,74 @@ private fun BookNameDialog(
             }
         },
     )
+}
+
+private fun previewBillsState() = BillsUiState(
+    isLoading = false,
+    books = PreviewData.books,
+    currentBookId = PreviewData.books.first().id,
+    periodLabel = "2026年9月",
+    income = 1_850_000,
+    expense = 426_800,
+    balance = 1_423_200,
+    dailyAverage = 23_711,
+    previousExpense = 398_000,
+    totalBudget = BudgetProgress(
+        budget = PreviewData.budgets[0],
+        categoryName = null,
+        categoryColor = null,
+        spent = 426_800,
+        ratio = 0.71f,
+    ),
+    categoryBudgets = listOf(
+        BudgetProgress(
+            budget = PreviewData.budgets[1],
+            categoryName = "餐饮",
+            categoryColor = "#FF7043",
+            spent = 486_00,
+            ratio = 0.40f,
+        ),
+        BudgetProgress(
+            budget = PreviewData.budgets[2],
+            categoryName = "交通",
+            categoryColor = "#42A5F5",
+            spent = 32_400,
+            ratio = 1.08f,
+        ),
+    ),
+    expenseCategories = PreviewData.expenseCategories,
+)
+
+@Preview(name = "账单 · 有预算", showBackground = true, heightDp = 860)
+@Composable
+private fun BillsContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        BillsContent(
+            state = previewBillsState(),
+            actions = BillsActions(),
+            snackbarHostState = remember { SnackbarHostState() },
+        )
+    }
+}
+
+@Preview(name = "账单 · 超支", showBackground = true, heightDp = 860)
+@Composable
+private fun BillsContentOverBudgetPreview() {
+    XRecordTheme(dynamicColor = false) {
+        BillsContent(
+            state = previewBillsState().copy(
+                totalBudget = BudgetProgress(
+                    budget = PreviewData.budgets[0],
+                    categoryName = null,
+                    categoryColor = null,
+                    spent = 7_120_00,
+                    ratio = 1.19f,
+                ),
+            ),
+            actions = BillsActions(),
+            snackbarHostState = remember { SnackbarHostState() },
+        )
+    }
 }
 
 @Composable

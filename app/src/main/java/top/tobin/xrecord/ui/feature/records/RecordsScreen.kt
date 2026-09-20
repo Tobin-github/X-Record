@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import java.time.LocalDate
 import kotlinx.coroutines.launch
 import top.tobin.xrecord.R
@@ -52,6 +53,8 @@ import top.tobin.xrecord.data.local.entity.TransactionType
 import top.tobin.xrecord.ui.theme.amountColor
 import top.tobin.xrecord.ui.theme.onColorFor
 import top.tobin.xrecord.ui.theme.parseHexColor
+import top.tobin.xrecord.ui.preview.PreviewData
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
 @Composable
 fun RecordsScreen(
@@ -80,11 +83,31 @@ fun RecordsScreen(
         }
     }
 
+    RecordsContent(
+        state = state,
+        onPreviousPeriod = viewModel::showPreviousPeriod,
+        onNextPeriod = viewModel::showNextPeriod,
+        onOpenTransaction = onOpenTransaction,
+        onDeleteTransaction = deleteWithUndo,
+        modifier = modifier,
+    )
+}
+
+/** 明细页的无状态内容，便于在预览器中渲染。 */
+@Composable
+internal fun RecordsContent(
+    state: RecordsUiState,
+    onPreviousPeriod: () -> Unit,
+    onNextPeriod: () -> Unit,
+    onOpenTransaction: (Long) -> Unit,
+    onDeleteTransaction: (TransactionDetail) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier.fillMaxSize()) {
         PeriodHeader(
             label = state.periodLabel,
-            onPrevious = viewModel::showPreviousPeriod,
-            onNext = viewModel::showNextPeriod,
+            onPrevious = onPreviousPeriod,
+            onNext = onNextPeriod,
         )
         SummaryRow(income = state.income, expense = state.expense, balance = state.balance)
         HorizontalDivider()
@@ -95,9 +118,61 @@ fun RecordsScreen(
             else -> TransactionList(
                 groups = state.groups,
                 onOpen = onOpenTransaction,
-                onDelete = deleteWithUndo,
+                onDelete = onDeleteTransaction,
             )
         }
+    }
+}
+
+private fun previewRecordsState() = RecordsUiState(
+    isLoading = false,
+    periodLabel = "2026年9月",
+    income = 1_850_000,
+    expense = 426_800,
+    balance = 1_423_200,
+    groups = PreviewData.transactionDetails
+        .groupBy { DateTimeUtils.toLocalDate(it.transaction.occurredAt) }
+        .entries
+        .sortedByDescending { it.key }
+        .map { (date, items) ->
+            DayGroup(
+                date = date,
+                expense = items
+                    .filter { it.transaction.type == TransactionType.EXPENSE }
+                    .sumOf { it.transaction.amount },
+                income = items
+                    .filter { it.transaction.type == TransactionType.INCOME }
+                    .sumOf { it.transaction.amount },
+                items = items,
+            )
+        },
+)
+
+@Preview(name = "明细 · 有数据", showBackground = true, heightDp = 720)
+@Composable
+private fun RecordsContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        RecordsContent(
+            state = previewRecordsState(),
+            onPreviousPeriod = {},
+            onNextPeriod = {},
+            onOpenTransaction = {},
+            onDeleteTransaction = {},
+        )
+    }
+}
+
+@Preview(name = "明细 · 空账期", showBackground = true, heightDp = 720)
+@Composable
+private fun RecordsContentEmptyPreview() {
+    XRecordTheme(dynamicColor = false) {
+        RecordsContent(
+            state = RecordsUiState(isLoading = false, periodLabel = "2026年10月"),
+            onPreviousPeriod = {},
+            onNextPeriod = {},
+            onOpenTransaction = {},
+            onDeleteTransaction = {},
+        )
     }
 }
 

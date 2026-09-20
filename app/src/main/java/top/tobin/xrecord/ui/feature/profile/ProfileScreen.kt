@@ -42,10 +42,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import top.tobin.xrecord.BuildConfig
 import top.tobin.xrecord.R
 import top.tobin.xrecord.data.local.entity.UserEntity
 import top.tobin.xrecord.data.local.dao.LocalAccount
+import top.tobin.xrecord.data.local.dao.AccountDataSummary
+import top.tobin.xrecord.ui.preview.PreviewData
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
 @Composable
 fun ProfileScreen(
@@ -67,6 +71,68 @@ fun ProfileScreen(
     val switchFailed by viewModel.switchFailed.collectAsStateWithLifecycle()
     val pendingDelete by viewModel.pendingDelete.collectAsStateWithLifecycle()
 
+    ProfileContent(
+        user = user,
+        periodStartDay = periodStartDay,
+        localAccounts = localAccounts,
+        switchFailed = switchFailed,
+        pendingDelete = pendingDelete,
+        cleared = cleared,
+        actions = ProfileActions(
+            onOpenAccounts = onOpenAccounts,
+            onOpenCategories = onOpenCategories,
+            onOpenRecurring = onOpenRecurring,
+            onOpenAppearance = onOpenAppearance,
+            onOpenBackup = onOpenBackup,
+            onOpenSecurity = onOpenSecurity,
+            onAddAccount = onAddAccount,
+            onSetPeriodStartDay = viewModel::setPeriodStartDay,
+            onClearAllData = viewModel::clearAllTransactions,
+            onClearedShown = viewModel::consumeCleared,
+            onLogout = viewModel::logout,
+            onSwitchAccount = viewModel::switchAccount,
+            onClearSwitchError = viewModel::clearSwitchError,
+            onRequestDeleteAccount = viewModel::requestDeleteAccount,
+            onConfirmDeleteAccount = viewModel::confirmDeleteAccount,
+            onCancelDeleteAccount = viewModel::cancelDeleteAccount,
+        ),
+        snackbarHostState = snackbarHostState,
+        modifier = modifier,
+    )
+}
+
+/** 「我的」页的操作。 */
+internal class ProfileActions(
+    val onOpenAccounts: () -> Unit = {},
+    val onOpenCategories: () -> Unit = {},
+    val onOpenRecurring: () -> Unit = {},
+    val onOpenAppearance: () -> Unit = {},
+    val onOpenBackup: () -> Unit = {},
+    val onOpenSecurity: () -> Unit = {},
+    val onAddAccount: () -> Unit = {},
+    val onSetPeriodStartDay: (Int) -> Unit = {},
+    val onClearAllData: () -> Unit = {},
+    val onClearedShown: () -> Unit = {},
+    val onLogout: () -> Unit = {},
+    val onSwitchAccount: (Long, String) -> Unit = { _, _ -> },
+    val onClearSwitchError: () -> Unit = {},
+    val onRequestDeleteAccount: (Long) -> Unit = {},
+    val onConfirmDeleteAccount: (Long) -> Unit = {},
+    val onCancelDeleteAccount: () -> Unit = {},
+)
+
+@Composable
+internal fun ProfileContent(
+    user: UserEntity,
+    periodStartDay: Int,
+    localAccounts: List<LocalAccount>,
+    switchFailed: Boolean,
+    pendingDelete: AccountDataSummary?,
+    cleared: Boolean,
+    actions: ProfileActions,
+    snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
+) {
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var showPeriodStartDialog by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
@@ -77,7 +143,7 @@ fun ProfileScreen(
     LaunchedEffect(cleared) {
         if (cleared) {
             snackbarHostState.showSnackbar(clearedMessage)
-            viewModel.consumeCleared()
+            actions.onClearedShown()
         }
     }
 
@@ -124,15 +190,15 @@ fun ProfileScreen(
         SectionTitle(text = stringResource(R.string.profile_section_records))
         SettingRow(
             title = stringResource(R.string.profile_accounts),
-            onClick = onOpenAccounts,
+            onClick = actions.onOpenAccounts,
         )
         SettingRow(
             title = stringResource(R.string.profile_categories),
-            onClick = onOpenCategories,
+            onClick = actions.onOpenCategories,
         )
         SettingRow(
             title = stringResource(R.string.profile_recurring),
-            onClick = onOpenRecurring,
+            onClick = actions.onOpenRecurring,
         )
         SettingRow(
             title = stringResource(R.string.profile_period_start_day),
@@ -145,15 +211,15 @@ fun ProfileScreen(
         SectionTitle(text = stringResource(R.string.profile_section_other))
         SettingRow(
             title = stringResource(R.string.profile_appearance),
-            onClick = onOpenAppearance,
+            onClick = actions.onOpenAppearance,
         )
         SettingRow(
             title = stringResource(R.string.profile_backup),
-            onClick = onOpenBackup,
+            onClick = actions.onOpenBackup,
         )
         SettingRow(
             title = stringResource(R.string.profile_security),
-            onClick = onOpenSecurity,
+            onClick = actions.onOpenSecurity,
         )
         SettingRow(
             title = stringResource(R.string.profile_clear_data),
@@ -177,7 +243,7 @@ fun ProfileScreen(
             Text(text = stringResource(R.string.profile_logout))
         }
         TextButton(
-            onClick = { viewModel.requestDeleteAccount(user.id) },
+            onClick = { actions.onRequestDeleteAccount(user.id) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 4.dp),
@@ -199,7 +265,7 @@ fun ProfileScreen(
                 TextButton(
                     onClick = {
                         showLogoutConfirm = false
-                        viewModel.logout()
+                        actions.onLogout()
                     },
                 ) {
                     Text(text = stringResource(R.string.action_confirm))
@@ -222,7 +288,7 @@ fun ProfileScreen(
                 TextButton(
                     onClick = {
                         showClearConfirm = false
-                        viewModel.clearAllTransactions()
+                        actions.onClearAllData()
                     },
                 ) {
                     Text(text = stringResource(R.string.action_confirm))
@@ -262,7 +328,7 @@ fun ProfileScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        parsed?.let(viewModel::setPeriodStartDay)
+                        parsed?.let(actions.onSetPeriodStartDay)
                         showPeriodStartDialog = false
                     },
                     enabled = parsed != null,
@@ -285,13 +351,13 @@ fun ProfileScreen(
             onSelect = { account ->
                 showAccountSwitcher = false
                 if (account.id != user.id) {
-                    viewModel.clearSwitchError()
+                    actions.onClearSwitchError()
                     pendingSwitchAccount = account
                 }
             },
             onAddAccount = {
                 showAccountSwitcher = false
-                onAddAccount()
+                actions.onAddAccount()
             },
             onDismiss = { showAccountSwitcher = false },
         )
@@ -299,7 +365,7 @@ fun ProfileScreen(
 
     pendingDelete?.let { summary ->
         AlertDialog(
-            onDismissRequest = viewModel::cancelDeleteAccount,
+            onDismissRequest = actions.onCancelDeleteAccount,
             title = { Text(text = stringResource(R.string.profile_delete_account)) },
             text = {
                 Text(
@@ -318,7 +384,7 @@ fun ProfileScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmDeleteAccount(user.id) }) {
+                TextButton(onClick = { actions.onConfirmDeleteAccount(user.id) }) {
                     Text(
                         text = stringResource(R.string.profile_delete_account_action),
                         color = MaterialTheme.colorScheme.error,
@@ -326,7 +392,7 @@ fun ProfileScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::cancelDeleteAccount) {
+                TextButton(onClick = actions.onCancelDeleteAccount) {
                     Text(text = stringResource(R.string.action_cancel))
                 }
             },
@@ -337,10 +403,10 @@ fun ProfileScreen(
         SwitchAccountPasswordDialog(
             account = account,
             failed = switchFailed,
-            onSubmit = { password -> viewModel.switchAccount(account.id, password) },
+            onSubmit = { password -> actions.onSwitchAccount(account.id, password) },
             onDismiss = {
                 pendingSwitchAccount = null
-                viewModel.clearSwitchError()
+                actions.onClearSwitchError()
             },
         )
     }
@@ -533,5 +599,31 @@ private fun SettingRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Preview(name = "我的", showBackground = true, heightDp = 860)
+@Composable
+private fun ProfileContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        ProfileContent(
+            user = top.tobin.xrecord.data.local.entity.UserEntity(
+                id = 1,
+                username = "tobin",
+                nickname = "Tobin",
+                avatarPath = null,
+                passwordHash = "",
+                passwordSalt = "",
+                passwordIterations = 1,
+                createdAt = 0,
+            ),
+            periodStartDay = 5,
+            localAccounts = PreviewData.localAccounts,
+            switchFailed = false,
+            pendingDelete = null,
+            cleared = false,
+            actions = ProfileActions(),
+            snackbarHostState = remember { SnackbarHostState() },
+        )
     }
 }

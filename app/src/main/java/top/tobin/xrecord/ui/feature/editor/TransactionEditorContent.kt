@@ -20,6 +20,9 @@ import top.tobin.xrecord.R
 import top.tobin.xrecord.data.local.entity.TransactionType
 import top.tobin.xrecord.data.repository.TransactionError
 import top.tobin.xrecord.ui.theme.amountColor
+import androidx.compose.ui.tooling.preview.Preview
+import top.tobin.xrecord.ui.preview.PreviewData
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
 /**
  * 记账表单主体，新增与编辑共用。
@@ -170,3 +173,62 @@ internal fun TransactionError.message(): String = stringResource(
         TransactionError.UNKNOWN -> R.string.editor_error_unknown
     },
 )
+
+private fun previewEditorState(type: TransactionType) = EditorUiState(
+    isLoading = false,
+    type = type,
+    expression = when (type) {
+        TransactionType.EXPENSE -> "35.00"
+        TransactionType.INCOME -> "18500.00"
+        TransactionType.TRANSFER -> "2000.00"
+    },
+    amountCents = 3500,
+    categoryId = PreviewData.expenseCategories.first().id,
+    accountId = PreviewData.accounts.first().account.id,
+    toAccountId = PreviewData.accounts[1].account.id,
+    occurredAt = System.currentTimeMillis(),
+    categories = PreviewData.expenseCategories,
+    accounts = PreviewData.accounts,
+)
+
+@Preview(name = "记账 · 支出", showBackground = true, heightDp = 760)
+@Composable
+private fun TransactionEditorContentExpensePreview() {
+    XRecordTheme(dynamicColor = false) {
+        TransactionEditorContent(
+            state = previewEditorState(TransactionType.EXPENSE),
+            onTypeChange = {},
+            onKey = {},
+            onBackspace = {},
+            onEvaluate = {},
+            onCategorySelect = {},
+            onAccountSelect = {},
+            onToAccountSelect = {},
+            onDateChange = {},
+            onRemarkChange = {},
+            onSave = {},
+        )
+    }
+}
+
+@Preview(name = "记账 · 转账", showBackground = true, heightDp = 760)
+@Composable
+private fun TransactionEditorContentTransferPreview() {
+    XRecordTheme(dynamicColor = false) {
+        TransactionEditorContent(
+            state = previewEditorState(TransactionType.TRANSFER).copy(
+                categories = emptyList(),
+            ),
+            onTypeChange = {},
+            onKey = {},
+            onBackspace = {},
+            onEvaluate = {},
+            onCategorySelect = {},
+            onAccountSelect = {},
+            onToAccountSelect = {},
+            onDateChange = {},
+            onRemarkChange = {},
+            onSave = {},
+        )
+    }
+}

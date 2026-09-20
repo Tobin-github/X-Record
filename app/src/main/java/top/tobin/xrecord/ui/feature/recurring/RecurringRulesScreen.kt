@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import top.tobin.xrecord.R
 import top.tobin.xrecord.core.money.MoneyFormatter
 import top.tobin.xrecord.core.util.DateTimeUtils
@@ -59,14 +60,44 @@ import top.tobin.xrecord.data.local.entity.RecurringRuleEntity
 import top.tobin.xrecord.data.local.entity.TransactionType
 import top.tobin.xrecord.data.repository.RecurringRuleDraft
 import top.tobin.xrecord.ui.theme.amountColor
+import top.tobin.xrecord.ui.preview.PreviewData
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecurringRulesScreen(
     onNavigateBack: () -> Unit,
     viewModel: RecurringRulesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    RecurringRulesContent(
+        state = state,
+        actions = RecurringRulesActions(
+            onSave = viewModel::save,
+            onSetEnabled = viewModel::setEnabled,
+            onDelete = viewModel::delete,
+            onMessageShown = viewModel::consumeMessage,
+        ),
+        onNavigateBack = onNavigateBack,
+    )
+}
+
+/** 定期账单页的操作。 */
+internal class RecurringRulesActions(
+    val onSave: (Long?, RecurringRuleDraft) -> Unit = { _, _ -> },
+    val onSetEnabled: (RecurringRuleEntity, Boolean) -> Unit = { _, _ -> },
+    val onDelete: (Long) -> Unit = {},
+    val onMessageShown: () -> Unit = {},
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun RecurringRulesContent(
+    state: RecurringRulesUiState,
+    actions: RecurringRulesActions,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val snackbarHostState = remember { SnackbarHostState() }
     var editorTarget by remember { mutableStateOf<RecurringEditorTarget?>(null) }
     var deleteTarget by remember { mutableStateOf<RecurringRuleEntity?>(null) }
@@ -90,7 +121,7 @@ fun RecurringRulesScreen(
     LaunchedEffect(messageText) {
         if (messageText != null) {
             snackbarHostState.showSnackbar(messageText)
-            viewModel.consumeMessage()
+            actions.onMessageShown()
         }
     }
 
@@ -143,7 +174,7 @@ fun RecurringRulesScreen(
                 RuleRow(
                     rule = rule,
                     onEdit = { editorTarget = RecurringEditorTarget.Edit(rule) },
-                    onToggle = { viewModel.setEnabled(rule, it) },
+                    onToggle = { actions.onSetEnabled(rule, it) },
                     onDelete = { deleteTarget = rule },
                 )
                 HorizontalDivider()
@@ -165,7 +196,7 @@ fun RecurringRulesScreen(
             incomeCategories = state.incomeCategories,
             onDismiss = { editorTarget = null },
             onConfirm = { draft ->
-                viewModel.save((target as? RecurringEditorTarget.Edit)?.rule?.id, draft)
+                actions.onSave((target as? RecurringEditorTarget.Edit)?.rule?.id, draft)
                 editorTarget = null
             },
         )
@@ -179,7 +210,7 @@ fun RecurringRulesScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.delete(rule.id)
+                        actions.onDelete(rule.id)
                         deleteTarget = null
                     },
                 ) {
@@ -595,6 +626,36 @@ private fun frequencyText(frequency: RecurringFrequency, interval: Int): String 
             R.string.recurring_every_n,
             step,
             frequencyBaseText(frequency),
+        )
+    }
+}
+
+@Preview(name = "定期账单 · 有规则", showBackground = true, heightDp = 720)
+@Composable
+private fun RecurringRulesContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        RecurringRulesContent(
+            state = RecurringRulesUiState(
+                isLoading = false,
+                rules = PreviewData.recurringRules,
+                accounts = PreviewData.accounts,
+                expenseCategories = PreviewData.expenseCategories,
+                incomeCategories = PreviewData.incomeCategories,
+            ),
+            actions = RecurringRulesActions(),
+            onNavigateBack = {},
+        )
+    }
+}
+
+@Preview(name = "定期账单 · 空", showBackground = true, heightDp = 480)
+@Composable
+private fun RecurringRulesContentEmptyPreview() {
+    XRecordTheme(dynamicColor = false) {
+        RecurringRulesContent(
+            state = RecurringRulesUiState(isLoading = false),
+            actions = RecurringRulesActions(),
+            onNavigateBack = {},
         )
     }
 }

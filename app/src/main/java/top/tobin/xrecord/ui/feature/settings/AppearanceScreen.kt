@@ -26,10 +26,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import top.tobin.xrecord.R
 import top.tobin.xrecord.data.preferences.ThemeMode
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceScreen(
     onNavigateBack: () -> Unit,
@@ -38,6 +39,24 @@ fun AppearanceScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val dynamicColor by viewModel.dynamicColor.collectAsStateWithLifecycle()
 
+    AppearanceContent(
+        themeMode = themeMode,
+        dynamicColor = dynamicColor,
+        onThemeModeChange = viewModel::setThemeMode,
+        onDynamicColorChange = viewModel::setDynamicColor,
+        onNavigateBack = onNavigateBack,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun AppearanceContent(
+    themeMode: ThemeMode,
+    dynamicColor: Boolean,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    onDynamicColorChange: (Boolean) -> Unit,
+    onNavigateBack: () -> Unit,
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -70,7 +89,7 @@ fun AppearanceScreen(
                 ThemeMode.entries.forEach { mode ->
                     FilterChip(
                         selected = mode == themeMode,
-                        onClick = { viewModel.setThemeMode(mode) },
+                        onClick = { onThemeModeChange(mode) },
                         label = { Text(text = mode.label()) },
                     )
                 }
@@ -94,10 +113,38 @@ fun AppearanceScreen(
                 }
                 Switch(
                     checked = dynamicColor,
-                    onCheckedChange = viewModel::setDynamicColor,
+                    onCheckedChange = onDynamicColorChange,
                 )
             }
         }
+    }
+}
+
+@Preview(name = "外观 · 跟随系统", showBackground = true)
+@Composable
+private fun AppearanceContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        AppearanceContent(
+            themeMode = ThemeMode.FOLLOW_SYSTEM,
+            dynamicColor = true,
+            onThemeModeChange = {},
+            onDynamicColorChange = {},
+            onNavigateBack = {},
+        )
+    }
+}
+
+@Preview(name = "外观 · 深色", showBackground = true)
+@Composable
+private fun AppearanceContentDarkPreview() {
+    XRecordTheme(darkTheme = true, dynamicColor = false) {
+        AppearanceContent(
+            themeMode = ThemeMode.DARK,
+            dynamicColor = false,
+            onThemeModeChange = {},
+            onDynamicColorChange = {},
+            onNavigateBack = {},
+        )
     }
 }
 

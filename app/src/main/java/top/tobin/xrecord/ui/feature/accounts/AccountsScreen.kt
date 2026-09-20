@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import top.tobin.xrecord.R
 import top.tobin.xrecord.core.money.MoneyFormatter
 import top.tobin.xrecord.data.local.dao.AccountWithBalance
@@ -57,14 +58,44 @@ import top.tobin.xrecord.data.repository.AccountDraft
 import top.tobin.xrecord.data.repository.defaultIncludeInTotal
 import top.tobin.xrecord.ui.theme.onColorFor
 import top.tobin.xrecord.ui.theme.parseHexColor
+import top.tobin.xrecord.ui.preview.PreviewData
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsScreen(
     onNavigateBack: () -> Unit,
     viewModel: AccountsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    AccountsContent(
+        state = state,
+        actions = AccountsActions(
+            onSave = viewModel::save,
+            onArchive = viewModel::setArchived,
+            onDelete = viewModel::delete,
+            onMessageShown = viewModel::consumeMessage,
+        ),
+        onNavigateBack = onNavigateBack,
+    )
+}
+
+/** 账户页的操作，集中成一个对象，免得内容函数的参数列表失控。 */
+internal class AccountsActions(
+    val onSave: (AccountEntity?, AccountDraft) -> Unit = { _, _ -> },
+    val onArchive: (Long, Boolean) -> Unit = { _, _ -> },
+    val onDelete: (AccountEntity) -> Unit = {},
+    val onMessageShown: () -> Unit = {},
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun AccountsContent(
+    state: AccountsUiState,
+    actions: AccountsActions,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val snackbarHostState = remember { SnackbarHostState() }
     var editorTarget by remember { mutableStateOf<AccountEditorTarget?>(null) }
     var deleteTarget by remember { mutableStateOf<AccountEntity?>(null) }
@@ -81,7 +112,7 @@ fun AccountsScreen(
     LaunchedEffect(messageText) {
         if (messageText != null) {
             snackbarHostState.showSnackbar(messageText)
-            viewModel.consumeMessage()
+            actions.onMessageShown()
         }
     }
 
@@ -127,7 +158,7 @@ fun AccountsScreen(
                     AccountRow(
                         item = item,
                         onEdit = { editorTarget = AccountEditorTarget.Edit(item.account) },
-                        onArchive = { viewModel.setArchived(item.account.id, true) },
+                        onArchive = { actions.onArchive(item.account.id, true) },
                         onDelete = { deleteTarget = item.account },
                     )
                 }
@@ -139,7 +170,7 @@ fun AccountsScreen(
                     AccountRow(
                         item = item,
                         onEdit = { editorTarget = AccountEditorTarget.Edit(item.account) },
-                        onArchive = { viewModel.setArchived(item.account.id, false) },
+                        onArchive = { actions.onArchive(item.account.id, false) },
                         onDelete = { deleteTarget = item.account },
                     )
                 }
@@ -158,7 +189,7 @@ fun AccountsScreen(
             account = (target as? AccountEditorTarget.Edit)?.account,
             onDismiss = { editorTarget = null },
             onConfirm = { draft ->
-                viewModel.save((target as? AccountEditorTarget.Edit)?.account, draft)
+                actions.onSave((target as? AccountEditorTarget.Edit)?.account, draft)
                 editorTarget = null
             },
         )
@@ -172,7 +203,7 @@ fun AccountsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.delete(account)
+                        actions.onDelete(account)
                         deleteTarget = null
                     },
                 ) {
@@ -422,3 +453,15 @@ internal fun AccountType.label(): String = stringResource(
         AccountType.OTHER -> R.string.account_type_other
     },
 )
+
+@Preview(name = "账户管理", showBackground = true, heightDp = 720)
+@Composable
+private fun AccountsContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        AccountsContent(
+            state = AccountsUiState(isLoading = false, accounts = PreviewData.accounts),
+            actions = AccountsActions(),
+            onNavigateBack = {},
+        )
+    }
+}

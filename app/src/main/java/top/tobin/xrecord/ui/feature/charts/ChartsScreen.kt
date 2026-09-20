@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
@@ -57,6 +58,7 @@ import com.patrykandpatrick.vico.compose.pie.data.pieSeries
 import com.patrykandpatrick.vico.compose.pie.rememberPieChart
 import kotlin.math.abs
 import kotlin.math.roundToLong
+import java.time.LocalDate
 import top.tobin.xrecord.R
 import top.tobin.xrecord.core.money.MoneyFormatter
 import top.tobin.xrecord.core.util.ChartRange
@@ -65,6 +67,7 @@ import top.tobin.xrecord.data.local.entity.TransactionType
 import top.tobin.xrecord.ui.components.AmountSummaryRow
 import top.tobin.xrecord.ui.theme.amountColor
 import top.tobin.xrecord.ui.theme.parseHexColor
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
 @Composable
 fun ChartsScreen(
@@ -73,6 +76,26 @@ fun ChartsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+    ChartsContent(
+        state = state,
+        onRangeSelect = viewModel::setRange,
+        onPreviousRange = viewModel::showPreviousRange,
+        onNextRange = viewModel::showNextRange,
+        onCategoryTypeSelect = viewModel::setCategoryType,
+        modifier = modifier,
+    )
+}
+
+/** 图表页的无状态内容，便于在预览器中渲染。 */
+@Composable
+internal fun ChartsContent(
+    state: ChartsUiState,
+    onRangeSelect: (ChartRange) -> Unit,
+    onPreviousRange: () -> Unit,
+    onNextRange: () -> Unit,
+    onCategoryTypeSelect: (TransactionType) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val expenseColor = TransactionType.EXPENSE.amountColor()
     val incomeColor = TransactionType.INCOME.amountColor()
     val vicoTheme = rememberM3VicoTheme(
@@ -86,11 +109,11 @@ fun ChartsScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            RangeTabs(current = state.range, onSelect = viewModel::setRange)
+            RangeTabs(current = state.range, onSelect = onRangeSelect)
             RangeHeader(
                 label = state.rangeLabel,
-                onPrevious = viewModel::showPreviousRange,
-                onNext = viewModel::showNextRange,
+                onPrevious = onPreviousRange,
+                onNext = onNextRange,
             )
             AmountSummaryRow(
                 incomeLabel = stringResource(R.string.records_income),
@@ -119,7 +142,7 @@ fun ChartsScreen(
             SectionTitle(text = stringResource(R.string.charts_category_title))
             CategoryTypeTabs(
                 current = state.categoryType,
-                onSelect = viewModel::setCategoryType,
+                onSelect = onCategoryTypeSelect,
             )
             if (state.slices.isEmpty()) {
                 EmptyHint()
@@ -128,6 +151,63 @@ fun ChartsScreen(
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+private fun previewChartsState() = ChartsUiState(
+    isLoading = false,
+    range = ChartRange.MONTH,
+    rangeLabel = "2026年9月",
+    periodStart = LocalDate.of(2026, 9, 1),
+    categoryType = TransactionType.EXPENSE,
+    trend = (1..30).map { day ->
+        TrendPoint(
+            label = if (day == 1) "9/1" else day.toString(),
+            expense = if (day % 7 == 0) 12_800 else 3_500 + day * 120L,
+            income = if (day == 10) 1_850_000 else 0L,
+        )
+    },
+    slices = listOf(
+        CategorySlice(1, "餐饮", "#FF7043", 128_600, 0.42f),
+        CategorySlice(4, "居住", "#8D6E63", 280_000, 0.31f),
+        CategorySlice(2, "交通", "#42A5F5", 62_400, 0.14f),
+        CategorySlice(3, "购物", "#EC407A", 48_200, 0.09f),
+        CategorySlice(6, "娱乐", "#AB47BC", 12_800, 0.04f),
+    ),
+    totalIncome = 1_850_000,
+    totalExpense = 426_800,
+)
+
+@Preview(name = "图表 · 有数据", showBackground = true, heightDp = 900)
+@Composable
+private fun ChartsContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        ChartsContent(
+            state = previewChartsState(),
+            onRangeSelect = {},
+            onPreviousRange = {},
+            onNextRange = {},
+            onCategoryTypeSelect = {},
+        )
+    }
+}
+
+@Preview(name = "图表 · 空区间", showBackground = true, heightDp = 900)
+@Composable
+private fun ChartsContentEmptyPreview() {
+    XRecordTheme(dynamicColor = false) {
+        ChartsContent(
+            state = ChartsUiState(
+                isLoading = false,
+                rangeLabel = "2026年10月",
+                periodStart = LocalDate.of(2026, 10, 1),
+                trend = (1..31).map { TrendPoint(it.toString(), 0L, 0L) },
+            ),
+            onRangeSelect = {},
+            onPreviousRange = {},
+            onNextRange = {},
+            onCategoryTypeSelect = {},
+        )
     }
 }
 

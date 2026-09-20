@@ -32,9 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import top.tobin.xrecord.R
 import top.tobin.xrecord.core.security.BiometricPromptLauncher
 import top.tobin.xrecord.ui.components.findActivity
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
 private const val PIN_LENGTH = 4
 
@@ -60,6 +62,54 @@ fun LockScreen(viewModel: AppLockViewModel = hiltViewModel()) {
         if (biometricEnabled) launchBiometric(activity, context) { viewModel.unlock() }
     }
 
+    LockContent(
+        pin = pin,
+        rejected = rejected,
+        biometricEnabled = biometricEnabled,
+        onDigit = { digit ->
+            if (pin.length < PIN_LENGTH) {
+                viewModel.clearPinError()
+                pin += digit
+                if (pin.length == PIN_LENGTH) {
+                    val entered = pin
+                    pin = ""
+                    viewModel.submitPin(entered)
+                }
+            }
+        },
+        onBackspace = {
+            viewModel.clearPinError()
+            pin = pin.dropLast(1)
+        },
+        onBiometric = { launchBiometric(activity, context) { viewModel.unlock() } },
+        onForgot = { showForgot = true },
+    )
+
+    if (showForgot) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showForgot = false },
+            title = { Text(text = stringResource(R.string.lock_forgot)) },
+            text = { Text(text = stringResource(R.string.lock_forgot_message)) },
+            confirmButton = {
+                TextButton(onClick = { showForgot = false }) {
+                    Text(text = stringResource(R.string.action_confirm))
+                }
+            },
+        )
+    }
+}
+
+/** 解锁界面的无状态内容：密码与错误状态由外部持有，便于在预览器中渲染。 */
+@Composable
+internal fun LockContent(
+    pin: String,
+    rejected: Boolean,
+    biometricEnabled: Boolean,
+    onDigit: (Char) -> Unit,
+    onBackspace: () -> Unit,
+    onBiometric: () -> Unit,
+    onForgot: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -93,46 +143,50 @@ fun LockScreen(viewModel: AppLockViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(32.dp))
         NumberPad(
-            onDigit = { digit ->
-                if (pin.length < PIN_LENGTH) {
-                    viewModel.clearPinError()
-                    pin += digit
-                    if (pin.length == PIN_LENGTH) {
-                        val entered = pin
-                        pin = ""
-                        viewModel.submitPin(entered)
-                    }
-                }
-            },
-            onBackspace = {
-                viewModel.clearPinError()
-                pin = pin.dropLast(1)
-            },
+            onDigit = onDigit,
+            onBackspace = onBackspace,
         )
 
         Spacer(modifier = Modifier.height(16.dp))
         if (biometricEnabled) {
-            TextButton(
-                onClick = { launchBiometric(activity, context) { viewModel.unlock() } },
-            ) {
+            TextButton(onClick = onBiometric) {
                 Text(text = stringResource(R.string.lock_use_biometric))
             }
         }
-        TextButton(onClick = { showForgot = true }) {
+        TextButton(onClick = onForgot) {
             Text(text = stringResource(R.string.lock_forgot))
         }
     }
+}
 
-    if (showForgot) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showForgot = false },
-            title = { Text(text = stringResource(R.string.lock_forgot)) },
-            text = { Text(text = stringResource(R.string.lock_forgot_message)) },
-            confirmButton = {
-                TextButton(onClick = { showForgot = false }) {
-                    Text(text = stringResource(R.string.action_confirm))
-                }
-            },
+@Preview(name = "锁屏 · 待输入", showBackground = true)
+@Composable
+private fun LockContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        LockContent(
+            pin = "25",
+            rejected = false,
+            biometricEnabled = true,
+            onDigit = {},
+            onBackspace = {},
+            onBiometric = {},
+            onForgot = {},
+        )
+    }
+}
+
+@Preview(name = "锁屏 · 密码错误", showBackground = true)
+@Composable
+private fun LockContentErrorPreview() {
+    XRecordTheme(dynamicColor = false) {
+        LockContent(
+            pin = "",
+            rejected = true,
+            biometricEnabled = false,
+            onDigit = {},
+            onBackspace = {},
+            onBiometric = {},
+            onForgot = {},
         )
     }
 }

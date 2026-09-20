@@ -26,7 +26,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import top.tobin.xrecord.R
+import top.tobin.xrecord.data.repository.AuthError
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
 @Composable
 fun LoginScreen(
@@ -36,6 +39,31 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LoginContent(
+        uiState = uiState,
+        onUsernameChange = viewModel::onUsernameChange,
+        onPasswordChange = viewModel::onPasswordChange,
+        onSubmit = viewModel::submit,
+        onNavigateToRegister = onNavigateToRegister,
+        modifier = modifier,
+    )
+}
+
+/**
+ * 登录页的无状态内容。
+ *
+ * 与 ViewModel 分离后才能在 Android Studio 的预览器里渲染——预览器不会
+ * 构造 Hilt 依赖，直接预览带 `hiltViewModel()` 的页面只会得到一片空白。
+ */
+@Composable
+internal fun LoginContent(
+    uiState: LoginUiState,
+    onUsernameChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onNavigateToRegister: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -59,7 +87,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(48.dp))
         OutlinedTextField(
             value = uiState.username,
-            onValueChange = viewModel::onUsernameChange,
+            onValueChange = onUsernameChange,
             label = { Text(text = stringResource(R.string.auth_username)) },
             singleLine = true,
             enabled = !uiState.isSubmitting,
@@ -70,7 +98,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
             value = uiState.password,
-            onValueChange = viewModel::onPasswordChange,
+            onValueChange = onPasswordChange,
             label = { Text(text = stringResource(R.string.auth_password)) },
             singleLine = true,
             enabled = !uiState.isSubmitting,
@@ -79,7 +107,7 @@ fun LoginScreen(
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Done,
             ),
-            keyboardActions = KeyboardActions(onDone = { viewModel.submit() }),
+            keyboardActions = KeyboardActions(onDone = { onSubmit() }),
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -90,7 +118,7 @@ fun LoginScreen(
             text = stringResource(R.string.auth_login_action),
             isSubmitting = uiState.isSubmitting,
             enabled = uiState.canSubmit,
-            onClick = viewModel::submit,
+            onClick = onSubmit,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -103,5 +131,37 @@ fun LoginScreen(
         }
 
         Spacer(modifier = Modifier.height(48.dp))
+    }
+}
+
+@Preview(name = "登录 · 默认", showBackground = true)
+@Composable
+private fun LoginContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        LoginContent(
+            uiState = LoginUiState(),
+            onUsernameChange = {},
+            onPasswordChange = {},
+            onSubmit = {},
+            onNavigateToRegister = {},
+        )
+    }
+}
+
+@Preview(name = "登录 · 密码错误", showBackground = true)
+@Composable
+private fun LoginContentErrorPreview() {
+    XRecordTheme(dynamicColor = false) {
+        LoginContent(
+            uiState = LoginUiState(
+                username = "tobin",
+                password = "wrong",
+                error = AuthError.CREDENTIALS_INVALID,
+            ),
+            onUsernameChange = {},
+            onPasswordChange = {},
+            onSubmit = {},
+            onNavigateToRegister = {},
+        )
     }
 }

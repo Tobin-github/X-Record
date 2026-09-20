@@ -47,19 +47,54 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import top.tobin.xrecord.R
 import top.tobin.xrecord.data.local.entity.CategoryEntity
 import top.tobin.xrecord.data.local.entity.CategoryType
 import top.tobin.xrecord.ui.theme.onColorFor
 import top.tobin.xrecord.ui.theme.parseHexColor
+import top.tobin.xrecord.ui.preview.PreviewData
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(
     onNavigateBack: () -> Unit,
     viewModel: CategoriesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    CategoriesContent(
+        state = state,
+        actions = CategoriesActions(
+            onTypeChange = viewModel::setType,
+            onCreate = viewModel::create,
+            onRename = viewModel::rename,
+            onToggleHidden = viewModel::setHidden,
+            onDelete = viewModel::delete,
+            onMessageShown = viewModel::consumeMessage,
+        ),
+        onNavigateBack = onNavigateBack,
+    )
+}
+
+/** 分类页的操作。 */
+internal class CategoriesActions(
+    val onTypeChange: (CategoryType) -> Unit = {},
+    val onCreate: (String, Long?) -> Unit = { _, _ -> },
+    val onRename: (CategoryEntity, String) -> Unit = { _, _ -> },
+    val onToggleHidden: (CategoryEntity, Boolean) -> Unit = { _, _ -> },
+    val onDelete: (CategoryEntity) -> Unit = {},
+    val onMessageShown: () -> Unit = {},
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CategoriesContent(
+    state: CategoriesUiState,
+    actions: CategoriesActions,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val snackbarHostState = remember { SnackbarHostState() }
     var editorTarget by remember { mutableStateOf<CategoryEditorTarget?>(null) }
     var deleteTarget by remember { mutableStateOf<CategoryEntity?>(null) }
@@ -77,7 +112,7 @@ fun CategoriesScreen(
     LaunchedEffect(messageText) {
         if (messageText != null) {
             snackbarHostState.showSnackbar(messageText)
-            viewModel.consumeMessage()
+            actions.onMessageShown()
         }
     }
 
@@ -106,7 +141,7 @@ fun CategoriesScreen(
                 listOf(CategoryType.EXPENSE, CategoryType.INCOME).forEachIndexed { index, type ->
                     Tab(
                         selected = state.type == type,
-                        onClick = { viewModel.setType(type) },
+                        onClick = { actions.onTypeChange(type) },
                         text = {
                             Text(
                                 text = if (type == CategoryType.EXPENSE) {
@@ -133,7 +168,7 @@ fun CategoriesScreen(
                             category = parent,
                             indent = false,
                             onRename = { editorTarget = CategoryEditorTarget.Rename(parent) },
-                            onToggleHidden = { viewModel.setHidden(parent, !parent.isHidden) },
+                            onToggleHidden = { actions.onToggleHidden(parent, !parent.isHidden) },
                             onDelete = { deleteTarget = parent },
                         )
                     }
@@ -145,7 +180,7 @@ fun CategoriesScreen(
                             category = child,
                             indent = true,
                             onRename = { editorTarget = CategoryEditorTarget.Rename(child) },
-                            onToggleHidden = { viewModel.setHidden(child, !child.isHidden) },
+                            onToggleHidden = { actions.onToggleHidden(child, !child.isHidden) },
                             onDelete = { deleteTarget = child },
                         )
                     }
@@ -169,7 +204,7 @@ fun CategoriesScreen(
                 showParentPicker = true,
                 onDismiss = { editorTarget = null },
                 onConfirm = { name, parentId ->
-                    viewModel.create(name, parentId)
+                    actions.onCreate(name, parentId)
                     editorTarget = null
                 },
             )
@@ -181,7 +216,7 @@ fun CategoriesScreen(
                 showParentPicker = false,
                 onDismiss = { editorTarget = null },
                 onConfirm = { name, _ ->
-                    viewModel.rename(target.category, name)
+                    actions.onRename(target.category, name)
                     editorTarget = null
                 },
             )
@@ -196,7 +231,7 @@ fun CategoriesScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.delete(category)
+                        actions.onDelete(category)
                         deleteTarget = null
                     },
                 ) {
@@ -410,4 +445,36 @@ private fun CategoryNameDialog(
             }
         },
     )
+}
+
+@Preview(name = "分类管理 · 支出", showBackground = true, heightDp = 720)
+@Composable
+private fun CategoriesContentExpensePreview() {
+    XRecordTheme(dynamicColor = false) {
+        CategoriesContent(
+            state = CategoriesUiState(
+                isLoading = false,
+                type = CategoryType.EXPENSE,
+                categories = PreviewData.expenseCategories,
+            ),
+            actions = CategoriesActions(),
+            onNavigateBack = {},
+        )
+    }
+}
+
+@Preview(name = "分类管理 · 收入", showBackground = true, heightDp = 720)
+@Composable
+private fun CategoriesContentIncomePreview() {
+    XRecordTheme(dynamicColor = false) {
+        CategoriesContent(
+            state = CategoriesUiState(
+                isLoading = false,
+                type = CategoryType.INCOME,
+                categories = PreviewData.incomeCategories,
+            ),
+            actions = CategoriesActions(),
+            onNavigateBack = {},
+        )
+    }
 }

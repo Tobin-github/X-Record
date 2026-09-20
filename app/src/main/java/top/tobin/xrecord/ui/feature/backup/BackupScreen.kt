@@ -31,16 +31,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import top.tobin.xrecord.R
+import top.tobin.xrecord.data.backup.BackupSummary
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackupScreen(
     onNavigateBack: () -> Unit,
     viewModel: BackupViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
@@ -51,6 +52,30 @@ fun BackupScreen(
         // 允许任意文件更省事，内容是否合法由解析结果负责
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let(viewModel::prepareImport) }
+
+    BackupContent(
+        state = state,
+        onExportClick = { exportLauncher.launch(viewModel.suggestedFileName()) },
+        onImportClick = { importLauncher.launch(arrayOf("*/*")) },
+        onConfirmImport = viewModel::confirmImport,
+        onCancelImport = viewModel::cancelImport,
+        onMessageShown = viewModel::consumeMessage,
+        onNavigateBack = onNavigateBack,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun BackupContent(
+    state: BackupUiState,
+    onExportClick: () -> Unit,
+    onImportClick: () -> Unit,
+    onConfirmImport: () -> Unit,
+    onCancelImport: () -> Unit,
+    onMessageShown: () -> Unit,
+    onNavigateBack: () -> Unit,
+) {
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val messageText = state.message?.let { message ->
         stringResource(
@@ -68,7 +93,7 @@ fun BackupScreen(
     LaunchedEffect(messageText) {
         if (messageText != null) {
             snackbarHostState.showSnackbar(messageText)
-            viewModel.consumeMessage()
+            onMessageShown()
         }
     }
 
@@ -103,7 +128,7 @@ fun BackupScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
             OutlinedButton(
-                onClick = { exportLauncher.launch(viewModel.suggestedFileName()) },
+                onClick = onExportClick,
                 enabled = !state.isBusy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -118,7 +143,7 @@ fun BackupScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
             OutlinedButton(
-                onClick = { importLauncher.launch(arrayOf("*/*")) },
+                onClick = onImportClick,
                 enabled = !state.isBusy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -135,7 +160,7 @@ fun BackupScreen(
 
     state.pendingImport?.let { summary ->
         AlertDialog(
-            onDismissRequest = viewModel::cancelImport,
+            onDismissRequest = onCancelImport,
             title = { Text(text = stringResource(R.string.backup_import_confirm_title)) },
             text = {
                 Column {
@@ -157,7 +182,7 @@ fun BackupScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = viewModel::confirmImport) {
+                TextButton(onClick = onConfirmImport) {
                     Text(
                         text = stringResource(R.string.backup_import_confirm_action),
                         color = MaterialTheme.colorScheme.error,
@@ -165,10 +190,51 @@ fun BackupScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::cancelImport) {
+                TextButton(onClick = onCancelImport) {
                     Text(text = stringResource(R.string.action_cancel))
                 }
             },
+        )
+    }
+}
+
+@Preview(name = "数据备份 · 默认", showBackground = true)
+@Composable
+private fun BackupContentPreview() {
+    XRecordTheme(dynamicColor = false) {
+        BackupContent(
+            state = BackupUiState(),
+            onExportClick = {},
+            onImportClick = {},
+            onConfirmImport = {},
+            onCancelImport = {},
+            onMessageShown = {},
+            onNavigateBack = {},
+        )
+    }
+}
+
+@Preview(name = "数据备份 · 导入确认", showBackground = true)
+@Composable
+private fun BackupContentConfirmPreview() {
+    XRecordTheme(dynamicColor = false) {
+        BackupContent(
+            state = BackupUiState(
+                pendingImport = BackupSummary(
+                    bookCount = 1,
+                    accountCount = 3,
+                    categoryCount = 19,
+                    transactionCount = 142,
+                    budgetCount = 2,
+                    recurringRuleCount = 4,
+                ),
+            ),
+            onExportClick = {},
+            onImportClick = {},
+            onConfirmImport = {},
+            onCancelImport = {},
+            onMessageShown = {},
+            onNavigateBack = {},
         )
     }
 }

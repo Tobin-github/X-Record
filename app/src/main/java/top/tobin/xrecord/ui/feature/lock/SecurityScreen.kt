@@ -39,17 +39,46 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.tooling.preview.Preview
 import top.tobin.xrecord.R
+import top.tobin.xrecord.data.preferences.AppLockConfig
+import top.tobin.xrecord.ui.theme.XRecordTheme
 
 private const val PIN_LENGTH = 4
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SecurityScreen(
     onNavigateBack: () -> Unit,
     viewModel: AppLockViewModel = hiltViewModel(),
 ) {
     val config by viewModel.config.collectAsStateWithLifecycle()
+
+    SecurityContent(
+        config = config,
+        biometricAvailable = viewModel.biometricAvailable,
+        onNavigateBack = onNavigateBack,
+        onDisable = viewModel::disable,
+        onSetPin = viewModel::enable,
+        onChangePin = viewModel::changePin,
+        onBiometricChange = viewModel::setBiometricEnabled,
+        onTimeoutChange = viewModel::setTimeoutSeconds,
+        onLockNow = viewModel::lockNow,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SecurityContent(
+    config: AppLockConfig,
+    biometricAvailable: Boolean,
+    onNavigateBack: () -> Unit,
+    onDisable: () -> Unit,
+    onSetPin: (String) -> Unit,
+    onChangePin: (String) -> Unit,
+    onBiometricChange: (Boolean) -> Unit,
+    onTimeoutChange: (Int) -> Unit,
+    onLockNow: () -> Unit,
+) {
     var pinDialog by remember { mutableStateOf<PinDialogMode?>(null) }
     var timeoutMenu by remember { mutableStateOf(false) }
 
@@ -93,7 +122,7 @@ fun SecurityScreen(
                 Switch(
                     checked = config.enabled,
                     onCheckedChange = { enabled ->
-                        if (enabled) pinDialog = PinDialogMode.Set else viewModel.disable()
+                        if (enabled) pinDialog = PinDialogMode.Set else onDisable()
                     },
                 )
             }
@@ -118,20 +147,20 @@ fun SecurityScreen(
                         Text(
                             text = stringResource(R.string.security_biometric),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = if (viewModel.biometricAvailable) {
+                            color = if (biometricAvailable) {
                                 MaterialTheme.colorScheme.onSurface
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
                         )
                         Text(
-                            text = if (viewModel.biometricAvailable) {
+                            text = if (biometricAvailable) {
                                 stringResource(R.string.security_biometric_hint)
                             } else {
                                 stringResource(R.string.security_biometric_unavailable)
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (viewModel.biometricAvailable) {
+                            color = if (biometricAvailable) {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             } else {
                                 MaterialTheme.colorScheme.error
@@ -139,9 +168,9 @@ fun SecurityScreen(
                         )
                     }
                     Switch(
-                        checked = config.biometricEnabled && viewModel.biometricAvailable,
-                        onCheckedChange = viewModel::setBiometricEnabled,
-                        enabled = viewModel.biometricAvailable,
+                        checked = config.biometricEnabled && biometricAvailable,
+                        onCheckedChange = onBiometricChange,
+                        enabled = biometricAvailable,
                     )
                 }
 
@@ -172,7 +201,7 @@ fun SecurityScreen(
                             DropdownMenuItem(
                                 text = { Text(text = timeoutLabel(seconds)) },
                                 onClick = {
-                                    viewModel.setTimeoutSeconds(seconds)
+                                    onTimeoutChange(seconds)
                                     timeoutMenu = false
                                 },
                             )
@@ -182,7 +211,7 @@ fun SecurityScreen(
 
                 SettingRow(
                     title = stringResource(R.string.security_lock_now),
-                    onClick = viewModel::lockNow,
+                    onClick = onLockNow,
                 )
             }
 
@@ -201,11 +230,53 @@ fun SecurityScreen(
             onDismiss = { pinDialog = null },
             onConfirm = { pin ->
                 when (mode) {
-                    PinDialogMode.Set -> viewModel.enable(pin)
-                    PinDialogMode.Change -> viewModel.changePin(pin)
+                    PinDialogMode.Set -> onSetPin(pin)
+                    PinDialogMode.Change -> onChangePin(pin)
                 }
                 pinDialog = null
             },
+        )
+    }
+}
+
+@Preview(name = "安全 · 未启用", showBackground = true)
+@Composable
+private fun SecurityContentOffPreview() {
+    XRecordTheme(dynamicColor = false) {
+        SecurityContent(
+            config = AppLockConfig(),
+            biometricAvailable = false,
+            onNavigateBack = {},
+            onDisable = {},
+            onSetPin = {},
+            onChangePin = {},
+            onBiometricChange = {},
+            onTimeoutChange = {},
+            onLockNow = {},
+        )
+    }
+}
+
+@Preview(name = "安全 · 已启用（无生物识别）", showBackground = true)
+@Composable
+private fun SecurityContentOnPreview() {
+    XRecordTheme(dynamicColor = false) {
+        SecurityContent(
+            config = AppLockConfig(
+                enabled = true,
+                pinHash = "preview",
+                pinSalt = "preview",
+                biometricEnabled = false,
+                timeoutSeconds = 30,
+            ),
+            biometricAvailable = false,
+            onNavigateBack = {},
+            onDisable = {},
+            onSetPin = {},
+            onChangePin = {},
+            onBiometricChange = {},
+            onTimeoutChange = {},
+            onLockNow = {},
         )
     }
 }
